@@ -1,5 +1,5 @@
 import { normalize, resolve } from "node:path";
-import type { ProcessInfo } from "./types";
+import type { Platform, ProcessInfo } from "./types";
 
 /**
  * @description 検出オプション
@@ -136,16 +136,6 @@ async function filterByCwd(
  */
 function normalizePath(p: string): string {
   return normalize(p).replace(/\\/g, "/");
-}
-
-/**
- * @description プラットフォーム固有のプロセス/ポート取得インターフェース
- */
-interface Platform {
-  listProcesses(): Promise<ProcessInfo[]>;
-  listPortProcesses(ports: number[]): Promise<Map<number, number>>;
-  getProcessCwds(pids: number[]): Promise<Map<number, string>>;
-  getAncestorPids(pid: number): Promise<Set<number>>;
 }
 
 /**

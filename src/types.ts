@@ -43,3 +43,13 @@ export interface Result {
   killed: number[];
   errors: Array<{ pid: number; message: string }>;
 }
+
+/**
+ * @description プラットフォーム固有のプロセス/ポート取得インターフェース
+ */
+export interface Platform {
+  listProcesses(): Promise<ProcessInfo[]>;
+  listPortProcesses(ports: number[]): Promise<Map<number, number>>;
+  getProcessCwds(pids: number[]): Promise<Map<number, string>>;
+  getAncestorPids(pid: number): Promise<Set<number>>;
+}

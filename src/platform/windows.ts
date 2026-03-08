@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { addPpidFallback, isTargetProcess, parsePortFromAddr, walkAncestors } from "../process";
-import type { ProcessInfo } from "../types";
+import type { Platform, ProcessInfo } from "../types";
 import procCwdCsharp from "./ProcCwd.cs";
 
 const execFileAsync = promisify(execFile);
@@ -163,3 +163,5 @@ export async function getProcessCwds(pids: number[]): Promise<Map<number, string
   }
   return result;
 }
+
+const _: Platform = { listProcesses, listPortProcesses, getProcessCwds, getAncestorPids };

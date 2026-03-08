@@ -8,7 +8,7 @@ import {
   parsePortFromAddr,
   walkAncestors,
 } from "../process";
-import type { ProcessInfo } from "../types";
+import type { Platform, ProcessInfo } from "../types";
 
 const execFileAsync = promisify(execFile);
 
@@ -248,3 +248,5 @@ async function getAncestorsMacOS(pid: number, ancestors: Set<number>): Promise<v
     // ps失敗時は空のまま返す(呼び出し元でppidフォールバック)
   }
 }
+
+const _: Platform = { listProcesses, listPortProcesses, getProcessCwds, getAncestorPids };
