@@ -1,8 +1,14 @@
 import { execFile } from "node:child_process";
 import { readFile, readlink } from "node:fs/promises";
 import { promisify } from "node:util";
+import {
+  addPpidFallback,
+  isTargetProcess,
+  MAX_ANCESTOR_DEPTH,
+  parsePortFromAddr,
+  walkAncestors,
+} from "../process";
 import type { ProcessInfo } from "../types";
-import { isTargetProcess, MAX_ANCESTOR_DEPTH, parsePortFromAddr } from "../types";
 
 const execFileAsync = promisify(execFile);
 
@@ -101,7 +107,6 @@ function parseSsLine(line: string): { port: number; pid: number } | null {
   return { port, pid };
 }
 
-
 /**
  * @description ssコマンドでLISTEN中のポートとPIDを取得(lsof利用不可時のfallback)
  * @param ports - 検索対象のポート番号
@@ -195,11 +200,7 @@ export async function getAncestorPids(pid: number): Promise<Set<number>> {
   } else {
     await getAncestorsMacOS(pid, ancestors);
   }
-  // 走査で何も取得できなかった場合はprocess.ppidにフォールバック
-  if (ancestors.size === 0) {
-    const ppid = process.ppid;
-    if (ppid > 0) ancestors.add(ppid);
-  }
+  addPpidFallback(ancestors);
   return ancestors;
 }
 
@@ -242,12 +243,7 @@ async function getAncestorsMacOS(pid: number, ancestors: Set<number>): Promise<v
       pidToParent.set(parseInt(match[1], 10), parseInt(match[2], 10));
     }
 
-    let current = pidToParent.get(pid);
-    for (let i = 0; i < MAX_ANCESTOR_DEPTH && current !== undefined && current > 0; i++) {
-      if (ancestors.has(current)) break;
-      ancestors.add(current);
-      current = pidToParent.get(current);
-    }
+    walkAncestors(pid, pidToParent, ancestors);
   } catch {
     // ps失敗時は空のまま返す(呼び出し元でppidフォールバック)
   }

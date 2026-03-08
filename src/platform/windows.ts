@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { addPpidFallback, isTargetProcess, parsePortFromAddr, walkAncestors } from "../process";
 import type { ProcessInfo } from "../types";
-import { isTargetProcess, MAX_ANCESTOR_DEPTH, parsePortFromAddr } from "../types";
 import procCwdCsharp from "./ProcCwd.cs";
 
 const execFileAsync = promisify(execFile);
@@ -111,17 +111,8 @@ export async function getAncestorPids(pid: number): Promise<Set<number>> {
     pidToParent.set(item.ProcessId, item.ParentProcessId);
   }
 
-  let current = pidToParent.get(pid);
-  for (let i = 0; i < MAX_ANCESTOR_DEPTH && current !== undefined && current > 0; i++) {
-    if (ancestors.has(current)) break;
-    ancestors.add(current);
-    current = pidToParent.get(current);
-  }
-
-  if (ancestors.size === 0) {
-    const ppid = process.ppid;
-    if (ppid > 0) ancestors.add(ppid);
-  }
+  walkAncestors(pid, pidToParent, ancestors);
+  addPpidFallback(ancestors);
   return ancestors;
 }
 
