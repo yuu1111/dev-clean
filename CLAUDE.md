@@ -2,47 +2,49 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## プロジェクト概要
+## Project Overview
 
-`dev-clean` — 開発中の残留プロセスを検出・停止するCLIツール。AIコーディングエージェントが `npx dev-clean` で使うことを主な想定とする。
+dev-clean は、開発サーバーの残留プロセス(node, bun, deno, tsx, ts-node)を検出・終了するCLIツール。
+AIコーディングエージェントが `npx dev-clean` で使うことを想定。TypeScript (ESM)、本番依存ゼロ。
 
-- ランタイム: Bun / Node.js
-- 言語: TypeScript (ESM)
-- 外部依存: なし (Node.js標準APIのみ)
-- 対応OS: Windows / macOS / Linux
-
-## ビルド・実行
+## Commands
 
 ```bash
-bun install
-bun run build        # TypeScript → ESM コンパイル
-bun run dist/cli.js  # ローカル実行
-bun test             # テスト実行
-bun run lint         # Biome lint
-bun run format       # Biome format + lint (自動修正)
+bun test              # テスト実行 (Bun test)
+bun test tests/cli.test.ts  # 単一テスト実行
+npm run build         # esbuild で dist/cli.js にバンドル
+npm run typecheck     # tsc --noEmit
+npm run lint          # biome check
+npm run format        # biome check --write --unsafe
 ```
 
-## アーキテクチャ
+## Architecture
 
 ```
 src/
-├── cli.ts           # CLIエントリポイント、引数パース
-├── types.ts         # 共有型定義
-├── detect.ts        # プロセス検出ロジック
-├── kill.ts          # プロセス停止ロジック
+├── cli.ts          # エントリポイント: parseArgs → detect → confirm → kill → output
+├── detect.ts       # プロセス検出 (CWDベース or ポートベース)
+├── kill.ts         # プロセス終了 (SIGTERM → 待機 → SIGKILL/taskkill)
+├── parse.ts        # ポート指定パーサー (範囲・カンマ区切り)
+├── process.ts      # 共有ユーティリティ (ターゲット判定、祖先PID取得)
+├── types.ts        # 型定義 (ProcessInfo, CliOptions, Platform interface)
 └── platform/
-    ├── windows.ts   # Windows: pwsh/wmic + netstat
-    └── unix.ts      # macOS/Linux: ps + lsof/ss
-tests/               # bun:test によるテスト
+    ├── windows.ts  # Windows実装: Get-CimInstance, netstat, C# P/Invoke
+    ├── unix.ts     # Unix実装: ps, lsof/ss, /proc
+    └── ProcCwd.cs  # Windows用 C# P/Invoke (プロセスCWD取得)
 ```
 
-- **cli.ts** がオプション解析 → **detect.ts** でプロセス検出 → **kill.ts** で停止、という一方向のフロー
-- プラットフォーム固有のプロセス取得・ポート検出は `platform/` に分離
-- Windows では `Get-CimInstance Win32_Process` (pwsh) または `wmic`、Unix では `ps aux` と `lsof`/`ss` を使用
+**処理フロー**: CLI引数パース → `detect()` で対象プロセス検出 → `--dry-run` なら表示のみ → `--yes` でなければ確認プロンプト → `killProcesses()` で終了 → 結果出力(テキスト or JSON)
 
-## 設計上の制約
+**Platform抽象**: `Platform` interfaceが4メソッド(`listProcesses`, `listPortProcesses`, `getProcessCwds`, `getAncestorPids`)を定義。実行時にOS判定して動的import。
 
-- 外部パッケージへの依存を追加しない
-- `package.json` の `bin` フィールドで CLI コマンドを登録し、shebang `#!/usr/bin/env node` を付ける
-- テストは `bun:test` を使用
-- 終了コード: 0 = 成功 (停止した or 対象なし)、1 = エラー
+**安全策**: 自PIDと全祖先PIDを除外(npx経由の自己終了を防止)。
+
+## Key Conventions
+
+- 日本語コメント・TSDoc使用
+- C# ソースは esbuild の `--loader:.cs=text` でテキストとしてバンドル
+- Windows では `powershell.exe` を使用(プロジェクトコード内、pwsh ではない)
+- 外部プロセス呼び出しにはすべてタイムアウト設定あり(5-15秒)
+- パス比較はクロスプラットフォーム対応(バックスラッシュ正規化、Windows小文字化)
+- CI: GitHub Actions (ubuntu, macos, windows) で lint → typecheck → test
