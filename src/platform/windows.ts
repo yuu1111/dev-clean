@@ -3,21 +3,7 @@ import { readFileSync } from "node:fs";
 import { promisify } from "node:util";
 import { addPpidFallback, isTargetProcess, parsePortFromAddr, walkAncestors } from "../process";
 import type { Platform, ProcessInfo } from "../types";
-// esbuild --loader:.cs=text でバンドル時はファイル内容、bun実行時はファイルパスになる
 import rawProcCwdCsharp from "./ProcCwd.cs";
-
-/**
- * @description ProcCwd.csのC#ソースコードを取得
- * @returns C#ソースコード文字列
- */
-function getProcCwdCsharp(): string {
-  if (rawProcCwdCsharp.endsWith(".cs")) {
-    return readFileSync(rawProcCwdCsharp, "utf-8");
-  }
-  return rawProcCwdCsharp;
-}
-
-const execFileAsync = promisify(execFile);
 
 /**
  * @description Get-CimInstanceの生プロセスデータ
@@ -33,10 +19,37 @@ interface RawProcess {
   CommandLine: string | null;
 }
 
+const execFileAsync = promisify(execFile);
+
+/**
+ * @description PowerShell出力をUTF-8に設定するプレフィックス
+ */
+const PS_UTF8_PREFIX = "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8";
+
 /**
  * @description 全プロセスデータのキャッシュ
  */
 let cachedProcesses: Promise<RawProcess[]> | null = null;
+
+/**
+ * @description ProcCwd.csのC#ソースコードを取得
+ * @returns C#ソースコード文字列
+ */
+function getProcCwdCsharp(): string {
+  if (rawProcCwdCsharp.endsWith(".cs")) {
+    return readFileSync(rawProcCwdCsharp, "utf-8");
+  }
+  return rawProcCwdCsharp;
+}
+
+/**
+ * @description Windowsパスとして妥当な形式かチェック(ゴミデータ除外用)
+ * @param p - パス文字列
+ * @returns ドライブレター付きパスならtrue
+ */
+function isValidWindowsPath(p: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(p);
+}
 
 /**
  * @description Get-CimInstanceで全プロセスデータを1回だけ取得しキャッシュ
@@ -45,8 +58,7 @@ let cachedProcesses: Promise<RawProcess[]> | null = null;
 function fetchAllProcesses(): Promise<RawProcess[]> {
   if (!cachedProcesses) {
     cachedProcesses = (async () => {
-      const script =
-        "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Compress";
+      const script = `${PS_UTF8_PREFIX}; Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json -Compress`;
       const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-Command", script], {
         timeout: 10000,
       });
@@ -136,7 +148,8 @@ async function getAncestorPids(pid: number): Promise<Set<number>> {
  */
 function buildCwdScript(pids: number[]): string {
   const pidLiteral = pids.join(",");
-  return `Add-Type -TypeDefinition @'
+  return `${PS_UTF8_PREFIX}
+Add-Type -TypeDefinition @'
 ${getProcCwdCsharp()}
 '@ -ErrorAction Stop
 
@@ -176,15 +189,6 @@ export async function getProcessCwds(pids: number[]): Promise<Map<number, string
     // PowerShell/P/Invoke失敗時は空Mapを返す
   }
   return result;
-}
-
-/**
- * @description Windowsパスとして妥当な形式かチェック(ゴミデータ除外用)
- * @param p - パス文字列
- * @returns ドライブレター付きパスならtrue
- */
-function isValidWindowsPath(p: string): boolean {
-  return /^[a-zA-Z]:[\\/]/.test(p);
 }
 
 export default {

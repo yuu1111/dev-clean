@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
+const execFileAsync = promisify(execFile);
 const isNotWindows = process.platform !== "win32";
 
 describe.skipIf(isNotWindows)("windows platform", () => {
@@ -24,6 +27,28 @@ describe.skipIf(isNotWindows)("windows platform", () => {
     const { getProcessCwds } = await import("../../src/platform/windows.js");
     const result = await getProcessCwds([process.pid]);
     expect(result instanceof Map).toBe(true);
+  });
+
+  it("PowerShell UTF-8 encoding handles non-ASCII process output", async () => {
+    // 非ASCII引数のプロセスを起動し、UTF-8プレフィックス付きPowerShellで取得してJSON.parseが成功することを確認
+    const marker = "テスト日本語";
+    const child = Bun.spawn(["node", "-e", `/* ${marker} */ setTimeout(()=>{},30000)`], {
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+    try {
+      // キャッシュを経由せず直接PowerShellを実行して検証
+      const script = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-CimInstance Win32_Process -Filter "ProcessId=${child.pid}" | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress`;
+      const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-Command", script], {
+        timeout: 10000,
+      });
+      const parsed = JSON.parse(stdout);
+      const item = Array.isArray(parsed) ? parsed[0] : parsed;
+      expect(item.ProcessId).toBe(child.pid);
+      expect(item.CommandLine).toContain(marker);
+    } finally {
+      child.kill();
+    }
   });
 
   it("getProcessCwds returns cwd of self process", async () => {
