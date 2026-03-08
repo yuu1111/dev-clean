@@ -87,8 +87,8 @@ dev-clean --json --yes
 ## 対応プラットフォーム
 
 - Windows
-- macOS
-- Linux
+- macOS (未確認)
+- Linux (未確認)
 
 Node.js >= 18.3.0 が必要です。
 

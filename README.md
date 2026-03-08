@@ -87,8 +87,8 @@ dev-clean --json --yes
 ## Supported Platforms
 
 - Windows
-- macOS
-- Linux
+- macOS (unverified)
+- Linux (unverified)
 
 Requires Node.js >= 18.3.0.
 
