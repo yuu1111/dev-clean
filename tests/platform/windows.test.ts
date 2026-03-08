@@ -19,4 +19,21 @@ describe.skipIf(isNotWindows)("windows platform", () => {
     const result = await listPortProcesses([99999]);
     expect(result instanceof Map).toBe(true);
   });
+
+  it("getProcessCwds returns a Map", async () => {
+    const { getProcessCwds } = await import("../../src/platform/windows.js");
+    const result = await getProcessCwds([process.pid]);
+    expect(result instanceof Map).toBe(true);
+  });
+
+  it("getProcessCwds returns cwd of self process", async () => {
+    const { getProcessCwds } = await import("../../src/platform/windows.js");
+    const result = await getProcessCwds([process.pid]);
+    const selfCwd = result.get(process.pid);
+    if (selfCwd) {
+      const normalizedSelfCwd = selfCwd.replace(/\\/g, "/").replace(/\/$/, "").toLowerCase();
+      const normalizedExpected = process.cwd().replace(/\\/g, "/").replace(/\/$/, "").toLowerCase();
+      expect(normalizedSelfCwd).toBe(normalizedExpected);
+    }
+  });
 });

@@ -19,4 +19,19 @@ describe.skipIf(isWindows)("unix platform", () => {
     const result = await listPortProcesses([99999]);
     expect(result instanceof Map).toBe(true);
   });
+
+  it("getProcessCwds returns a Map", async () => {
+    const { getProcessCwds } = await import("../../src/platform/unix.js");
+    const result = await getProcessCwds([process.pid]);
+    expect(result instanceof Map).toBe(true);
+  });
+
+  it("getProcessCwds returns cwd of self process", async () => {
+    const { getProcessCwds } = await import("../../src/platform/unix.js");
+    const result = await getProcessCwds([process.pid]);
+    const selfCwd = result.get(process.pid);
+    if (selfCwd) {
+      expect(selfCwd).toBe(process.cwd());
+    }
+  });
 });

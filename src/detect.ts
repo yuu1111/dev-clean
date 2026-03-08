@@ -88,11 +88,38 @@ async function detectByCwd(
   const normalizedCwd = normalizePath(resolve(cwd));
   const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
 
-  return processes.filter((proc) => {
-    if (proc.pid === selfPid || proc.pid === parentPid) return false;
+  const candidates = processes.filter((proc) => proc.pid !== selfPid && proc.pid !== parentPid);
+
+  // コマンドラインマッチで検出
+  const cmdMatched = new Set<number>();
+  for (const proc of candidates) {
     const cmd = isWin ? normalizePath(proc.command).toLowerCase() : proc.command;
-    return cmd.includes(target);
-  });
+    if (cmd.includes(target)) {
+      cmdMatched.add(proc.pid);
+    }
+  }
+
+  // CWDプレフィックスマッチで追加検出
+  const cwdMatched = new Set<number>();
+  try {
+    const pids = candidates.filter((p) => !cmdMatched.has(p.pid)).map((p) => p.pid);
+    if (pids.length > 0) {
+      const cwdMap = await platform.getProcessCwds(pids);
+      for (const [pid, procCwd] of cwdMap) {
+        const normalizedProcCwd = isWin
+          ? normalizePath(procCwd).toLowerCase()
+          : normalizePath(procCwd);
+        // target自体に一致、またはtarget配下のサブディレクトリ
+        if (normalizedProcCwd === target || normalizedProcCwd.startsWith(`${target}/`)) {
+          cwdMatched.add(pid);
+        }
+      }
+    }
+  } catch {
+    // getProcessCwds失敗時はコマンドラインマッチのみにフォールバック
+  }
+
+  return candidates.filter((proc) => cmdMatched.has(proc.pid) || cwdMatched.has(proc.pid));
 }
 
 /**
@@ -110,6 +137,7 @@ function normalizePath(p: string): string {
 interface Platform {
   listProcesses(): Promise<ProcessInfo[]>;
   listPortProcesses(ports: number[]): Promise<Map<number, number>>;
+  getProcessCwds(pids: number[]): Promise<Map<number, string>>;
 }
 
 /**
