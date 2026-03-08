@@ -23,6 +23,14 @@
     "kill",
     "port"
   ],
+  "author": "yuu1111",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yuu1111/dev-clean.git"
+  },
+  "engines": {
+    "node": ">=18.3.0"
+  },
   "license": "MIT",
   "devDependencies": {
     "@biomejs/biome": "^2.4.6",
