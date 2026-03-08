@@ -135,11 +135,19 @@ function printFound(found: ProcessInfo[]): void {
  * @param result - 停止結果
  */
 function printResult(result: Result): void {
-  if (result.killed.length > 0) {
+  if (result.errors.length === 0) {
     info(`Killed ${result.killed.length} process(es).`);
+    return;
   }
+
   for (const e of result.errors) {
-    error(`Failed to kill PID ${e.pid}: ${e.message}`);
+    error(`PID ${e.pid}: ${e.message}`);
+  }
+
+  if (result.killed.length > 0) {
+    info(`Done: ${result.killed.length} killed, ${result.errors.length} failed.`);
+  } else {
+    info(`Failed to kill ${result.errors.length} process(es).`);
   }
 }
 

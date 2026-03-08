@@ -18,6 +18,9 @@ public class ProcCwd {
         int size, out int bytesRead);
 
     [DllImport("kernel32.dll")]
+    static extern bool IsWow64Process(IntPtr hProcess, out bool isWow64);
+
+    [DllImport("kernel32.dll")]
     static extern bool CloseHandle(IntPtr h);
 
     [StructLayout(LayoutKind.Sequential)]
@@ -48,6 +51,9 @@ public class ProcCwd {
         IntPtr hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, false, pid);
         if (hProc == IntPtr.Zero) return null;
         try {
+            // PEBオフセットは64bitプロセス前提のため32bitプロセスはスキップ
+            bool isWow64;
+            if (IsWow64Process(hProc, out isWow64) && isWow64) return null;
             var pbi = new PROCESS_BASIC_INFORMATION();
             int retLen;
             if (NtQueryInformationProcess(hProc, 0, ref pbi, Marshal.SizeOf(pbi), out retLen) != 0)

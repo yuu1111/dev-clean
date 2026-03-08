@@ -28,6 +28,31 @@ describe("detect CWD-based", () => {
   });
 });
 
+describe("detect CWD-based does not match by command line", () => {
+  let childProc: ReturnType<typeof Bun.spawn>;
+  let testDir: string;
+
+  beforeAll(() => {
+    testDir = mkdtempSync(join(tmpdir(), "dev-clean-cmdarg-"));
+    // testDirをコマンドライン引数に含むが、CWDは別の場所(tmpdir)で起動
+    childProc = Bun.spawn(["node", "-e", "setTimeout(()=>{},30000)", "--", testDir], {
+      cwd: tmpdir(),
+      stdout: "ignore",
+      stderr: "ignore",
+    });
+  });
+
+  afterAll(() => {
+    childProc.kill();
+  });
+
+  it("does not detect process whose command line contains target path but CWD differs", async () => {
+    const result = await detect({ cwd: testDir, ports: [] });
+    const pids = result.map((p) => p.pid);
+    expect(pids).not.toContain(childProc.pid);
+  });
+});
+
 describe("detect", () => {
   it("returns an array", async () => {
     const result = await detect({ cwd: "/nonexistent/path/that/matches/nothing", ports: [] });

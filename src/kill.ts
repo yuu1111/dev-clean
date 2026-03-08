@@ -49,7 +49,7 @@ async function killOne(pid: number): Promise<void> {
   } catch (err: unknown) {
     const code = (err as NodeJS.ErrnoException).code;
     if (code === "ESRCH") return;
-    if (code === "EPERM") throw new Error(`Permission denied (PID ${pid})`);
+    if (code === "EPERM") throw new Error("Permission denied");
     throw err;
   }
 

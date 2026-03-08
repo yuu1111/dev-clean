@@ -168,7 +168,7 @@ export async function getProcessCwds(pids: number[]): Promise<Map<number, string
     const items: Array<{ Pid: number; Cwd: string }> = Array.isArray(raw) ? raw : [raw];
 
     for (const item of items) {
-      if (item.Cwd) {
+      if (item.Cwd && isValidWindowsPath(item.Cwd)) {
         result.set(item.Pid, item.Cwd);
       }
     }
@@ -176,6 +176,15 @@ export async function getProcessCwds(pids: number[]): Promise<Map<number, string
     // PowerShell/P/Invoke失敗時は空Mapを返す
   }
   return result;
+}
+
+/**
+ * @description Windowsパスとして妥当な形式かチェック(ゴミデータ除外用)
+ * @param p - パス文字列
+ * @returns ドライブレター付きパスならtrue
+ */
+function isValidWindowsPath(p: string): boolean {
+  return /^[a-zA-Z]:[\\/]/.test(p);
 }
 
 export default {

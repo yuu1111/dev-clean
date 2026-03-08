@@ -78,7 +78,7 @@ function filterByPort(
 }
 
 /**
- * @description コマンドラインとCWDマッチで対象プロセスをフィルタリング
+ * @description 実CWDマッチで対象プロセスをフィルタリング
  * @param platform - プラットフォームアダプタ(getProcessCwds用)
  * @param processes - プロセス一覧
  * @param cwd - 対象ディレクトリパス
@@ -97,36 +97,23 @@ async function filterByCwd(
 
   const candidates = processes.filter((proc) => !excludePids.has(proc.pid));
 
-  // コマンドラインマッチで検出
-  const cmdMatched = new Set<number>();
-  for (const proc of candidates) {
-    const cmd = isWin ? normalizePath(proc.command).toLowerCase() : proc.command;
-    if (cmd.includes(target)) {
-      cmdMatched.add(proc.pid);
-    }
-  }
-
-  // CWDプレフィックスマッチで追加検出
-  const cwdMatched = new Set<number>();
+  let cwdMap = new Map<number, string>();
   try {
-    const pids = candidates.filter((p) => !cmdMatched.has(p.pid)).map((p) => p.pid);
+    const pids = candidates.map((p) => p.pid);
     if (pids.length > 0) {
-      const cwdMap = await platform.getProcessCwds(pids);
-      for (const [pid, procCwd] of cwdMap) {
-        const normalizedProcCwd = isWin
-          ? normalizePath(procCwd).toLowerCase()
-          : normalizePath(procCwd);
-        // target自体に一致、またはtarget配下のサブディレクトリ
-        if (normalizedProcCwd === target || normalizedProcCwd.startsWith(`${target}/`)) {
-          cwdMatched.add(pid);
-        }
-      }
+      cwdMap = await platform.getProcessCwds(pids);
     }
   } catch {
-    // getProcessCwds失敗時はコマンドラインマッチのみにフォールバック
+    // getProcessCwds失敗時はCWD検証不能のため空結果を返す
   }
 
-  return candidates.filter((proc) => cmdMatched.has(proc.pid) || cwdMatched.has(proc.pid));
+  return candidates.filter((proc) => {
+    const procCwd = cwdMap.get(proc.pid);
+    if (!procCwd) return false;
+    const normalized = isWin ? normalizePath(procCwd).toLowerCase() : normalizePath(procCwd);
+    // target自体に一致、またはtarget配下のサブディレクトリ
+    return normalized === target || normalized.startsWith(`${target}/`);
+  });
 }
 
 /**
