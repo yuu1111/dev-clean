@@ -1,10 +1,10 @@
 {
   "name": "dev-clean",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Detect and kill lingering dev server processes",
   "type": "module",
   "bin": {
-    "dev-clean": "./dist/cli.js"
+    "dev-clean": "dist/cli.js"
   },
   "files": [
     "dist"
@@ -24,10 +24,7 @@
     "port"
   ],
   "author": "yuu1111",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/yuu1111/dev-clean.git"
-  },
+  "repository": "yuu1111/dev-clean",
   "engines": {
     "node": ">=18.3.0"
   },
