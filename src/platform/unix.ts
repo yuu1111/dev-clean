@@ -56,12 +56,11 @@ export async function listPortProcesses(ports: number[]): Promise<Map<number, nu
  * @returns port→PIDのマッピング
  */
 async function listPortsLsof(ports: number[]): Promise<Map<number, number>> {
-  const portArgs = ports.flatMap((p) => [`-iTCP:${p}`]);
+  const portArgs = ports.map((p) => `-iTCP:${p}`);
   const { stdout } = await execFileAsync("lsof", [...portArgs, "-sTCP:LISTEN", "-nP"], {
     timeout: 10000,
   });
 
-  const portSet = new Set(ports);
   const portToPid = new Map<number, number>();
 
   for (const line of stdout.split("\n").slice(1)) {
@@ -71,9 +70,7 @@ async function listPortsLsof(ports: number[]): Promise<Map<number, number>> {
     if (Number.isNaN(pid)) continue;
     const port = parsePortFromAddr(parts[8]);
     if (port === null) continue;
-    if (portSet.has(port)) {
-      portToPid.set(port, pid);
-    }
+    portToPid.set(port, pid);
   }
   return portToPid;
 }

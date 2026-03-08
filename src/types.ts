@@ -65,8 +65,8 @@ export const TARGET_NAMES = new Set([
  */
 export function isTargetProcess(name: string): boolean {
   const lower = name.toLowerCase();
-  const base = lower.replace(/\.exe$/, "");
-  return TARGET_NAMES.has(lower) || TARGET_NAMES.has(base);
+  if (TARGET_NAMES.has(lower)) return true;
+  return TARGET_NAMES.has(lower.replace(/\.exe$/, ""));
 }
 
 /**

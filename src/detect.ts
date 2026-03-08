@@ -52,17 +52,20 @@ async function detectByPort(
   }
 
   const results: ProcessInfo[] = [];
+  const addedPids = new Set<number>();
 
   for (const proc of processes) {
     if (proc.pid === selfPid || proc.pid === parentPid) continue;
-    if (!pidToPort.has(proc.pid)) continue;
-    results.push({ ...proc, port: pidToPort.get(proc.pid) });
+    const port = pidToPort.get(proc.pid);
+    if (port === undefined) continue;
+    results.push({ ...proc, port });
+    addedPids.add(proc.pid);
   }
 
   // ポートを使っているがTARGET_NAMESに含まれないプロセスも含める
   for (const [port, pid] of portMap) {
     if (pid === selfPid || pid === parentPid) continue;
-    if (results.some((r) => r.pid === pid)) continue;
+    if (addedPids.has(pid)) continue;
     results.push({ pid, name: "unknown", command: "", port });
   }
 
