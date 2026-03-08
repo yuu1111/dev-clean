@@ -18,34 +18,39 @@ interface DetectOptions {
  */
 export async function detect(options: DetectOptions): Promise<ProcessInfo[]> {
   const platform = await loadPlatform();
-  const selfPid = process.pid;
-  const parentPid = process.ppid;
 
   if (options.ports.length > 0) {
-    return await detectByPort(platform, options.ports, selfPid, parentPid);
+    // getAncestorPids, listProcesses, listPortProcesses を全て並列実行
+    const [excludePids, processes, portMap] = await Promise.all([
+      platform.getAncestorPids(process.pid),
+      platform.listProcesses(),
+      platform.listPortProcesses(options.ports),
+    ]);
+    excludePids.add(process.pid);
+    return filterByPort(processes, portMap, excludePids);
   }
-  return await detectByCwd(platform, options.cwd, selfPid, parentPid);
+
+  // getAncestorPids と listProcesses を並列実行
+  const [excludePids, processes] = await Promise.all([
+    platform.getAncestorPids(process.pid),
+    platform.listProcesses(),
+  ]);
+  excludePids.add(process.pid);
+  return await filterByCwd(platform, processes, options.cwd, excludePids);
 }
 
 /**
- * @description 指定ポートをLISTENしているプロセスを検出
- * @param platform - プラットフォームアダプタ
- * @param ports - 対象ポート番号
- * @param selfPid - 自プロセスのPID(除外用)
- * @param parentPid - 親プロセスのPID(除外用)
+ * @description ポートマッチで対象プロセスをフィルタリング
+ * @param processes - プロセス一覧
+ * @param portMap - port→PIDのマッピング
+ * @param excludePids - 除外するPIDのSet(自プロセスと祖先)
  * @returns 検出されたプロセス一覧
  */
-async function detectByPort(
-  platform: Platform,
-  ports: number[],
-  selfPid: number,
-  parentPid: number,
-): Promise<ProcessInfo[]> {
-  const [processes, portMap] = await Promise.all([
-    platform.listProcesses(),
-    platform.listPortProcesses(ports),
-  ]);
-
+function filterByPort(
+  processes: ProcessInfo[],
+  portMap: Map<number, number>,
+  excludePids: Set<number>,
+): ProcessInfo[] {
   const pidToPort = new Map<number, number>();
   for (const [port, pid] of portMap) {
     pidToPort.set(pid, port);
@@ -55,7 +60,7 @@ async function detectByPort(
   const addedPids = new Set<number>();
 
   for (const proc of processes) {
-    if (proc.pid === selfPid || proc.pid === parentPid) continue;
+    if (excludePids.has(proc.pid)) continue;
     const port = pidToPort.get(proc.pid);
     if (port === undefined) continue;
     results.push({ ...proc, port });
@@ -64,7 +69,7 @@ async function detectByPort(
 
   // ポートを使っているがTARGET_NAMESに含まれないプロセスも含める
   for (const [port, pid] of portMap) {
-    if (pid === selfPid || pid === parentPid) continue;
+    if (excludePids.has(pid)) continue;
     if (addedPids.has(pid)) continue;
     results.push({ pid, name: "unknown", command: "", port });
   }
@@ -73,25 +78,24 @@ async function detectByPort(
 }
 
 /**
- * @description コマンドラインにcwdパスを含むプロセスを検出
- * @param platform - プラットフォームアダプタ
+ * @description コマンドラインとCWDマッチで対象プロセスをフィルタリング
+ * @param platform - プラットフォームアダプタ(getProcessCwds用)
+ * @param processes - プロセス一覧
  * @param cwd - 対象ディレクトリパス
- * @param selfPid - 自プロセスのPID(除外用)
- * @param parentPid - 親プロセスのPID(除外用)
+ * @param excludePids - 除外するPIDのSet(自プロセスと祖先)
  * @returns 検出されたプロセス一覧
  */
-async function detectByCwd(
+async function filterByCwd(
   platform: Platform,
+  processes: ProcessInfo[],
   cwd: string,
-  selfPid: number,
-  parentPid: number,
+  excludePids: Set<number>,
 ): Promise<ProcessInfo[]> {
-  const processes = await platform.listProcesses();
   const isWin = process.platform === "win32";
   const normalizedCwd = normalizePath(resolve(cwd));
   const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
 
-  const candidates = processes.filter((proc) => proc.pid !== selfPid && proc.pid !== parentPid);
+  const candidates = processes.filter((proc) => !excludePids.has(proc.pid));
 
   // コマンドラインマッチで検出
   const cmdMatched = new Set<number>();
@@ -141,6 +145,7 @@ interface Platform {
   listProcesses(): Promise<ProcessInfo[]>;
   listPortProcesses(ports: number[]): Promise<Map<number, number>>;
   getProcessCwds(pids: number[]): Promise<Map<number, string>>;
+  getAncestorPids(pid: number): Promise<Set<number>>;
 }
 
 /**

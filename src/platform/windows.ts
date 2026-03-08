@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ProcessInfo } from "../types";
-import { isTargetProcess, parsePortFromAddr } from "../types";
+import { isTargetProcess, MAX_ANCESTOR_DEPTH, parsePortFromAddr } from "../types";
 
 const execFileAsync = promisify(execFile);
 
@@ -55,6 +55,44 @@ export async function listPortProcesses(ports: number[]): Promise<Map<number, nu
     }
   }
   return portToPid;
+}
+
+/**
+ * @description 指定PIDの祖先プロセスPIDを全て取得
+ * @param pid - 起点プロセスID
+ * @returns 祖先PIDのSet(自身は含まない)
+ */
+export async function getAncestorPids(pid: number): Promise<Set<number>> {
+  const ancestors = new Set<number>();
+  try {
+    const script =
+      "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId | ConvertTo-Json -Compress";
+    const { stdout } = await execFileAsync("powershell.exe", ["-NoProfile", "-Command", script], {
+      timeout: 10000,
+    });
+
+    const raw = JSON.parse(stdout);
+    const items: Array<{ ProcessId: number; ParentProcessId: number }> = Array.isArray(raw)
+      ? raw
+      : [raw];
+
+    const pidToParent = new Map<number, number>();
+    for (const item of items) {
+      pidToParent.set(item.ProcessId, item.ParentProcessId);
+    }
+
+    let current = pidToParent.get(pid);
+    for (let i = 0; i < MAX_ANCESTOR_DEPTH && current !== undefined && current > 0; i++) {
+      if (ancestors.has(current)) break;
+      ancestors.add(current);
+      current = pidToParent.get(current);
+    }
+  } catch {
+    // 取得失敗時はprocess.ppidだけフォールバック
+    const ppid = process.ppid;
+    if (ppid > 0) ancestors.add(ppid);
+  }
+  return ancestors;
 }
 
 /**

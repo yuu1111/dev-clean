@@ -45,9 +45,14 @@ export interface Result {
 }
 
 /**
+ * @description 祖先プロセス走査の最大深度(循環防止)
+ */
+export const MAX_ANCESTOR_DEPTH = 64;
+
+/**
  * @description 検出対象のプロセス名一覧
  */
-export const TARGET_NAMES = new Set([
+const TARGET_NAMES = new Set([
   "node",
   "node.exe",
   "bun",

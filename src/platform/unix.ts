@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
-import { readlink } from "node:fs/promises";
+import { readFile, readlink } from "node:fs/promises";
 import { promisify } from "node:util";
 import type { ProcessInfo } from "../types";
-import { isTargetProcess, parsePortFromAddr } from "../types";
+import { isTargetProcess, MAX_ANCESTOR_DEPTH, parsePortFromAddr } from "../types";
 
 const execFileAsync = promisify(execFile);
 
@@ -160,4 +160,74 @@ async function getProcessCwdsMacOS(pids: number[]): Promise<Map<number, string>>
     // lsof失敗時は空Mapを返す
   }
   return result;
+}
+
+/**
+ * @description 指定PIDの祖先プロセスPIDを全て取得
+ * @param pid - 起点プロセスID
+ * @returns 祖先PIDのSet(自身は含まない)
+ */
+export async function getAncestorPids(pid: number): Promise<Set<number>> {
+  const ancestors = new Set<number>();
+  if (process.platform === "linux") {
+    await getAncestorsLinux(pid, ancestors);
+  } else {
+    await getAncestorsMacOS(pid, ancestors);
+  }
+  // 走査で何も取得できなかった場合はprocess.ppidにフォールバック
+  if (ancestors.size === 0) {
+    const ppid = process.ppid;
+    if (ppid > 0) ancestors.add(ppid);
+  }
+  return ancestors;
+}
+
+/**
+ * @description Linuxで/proc/<pid>/statからPPIDを読み取り祖先を走査
+ * @param pid - 起点プロセスID
+ * @param ancestors - 結果を蓄積するSet(変更される)
+ */
+async function getAncestorsLinux(pid: number, ancestors: Set<number>): Promise<void> {
+  let current = pid;
+  for (let i = 0; i < MAX_ANCESTOR_DEPTH; i++) {
+    try {
+      const stat = await readFile(`/proc/${current}/stat`, "utf-8");
+      // /proc/<pid>/stat の4番目のフィールドがPPID
+      const match = stat.match(/^\d+\s+\(.*?\)\s+\S+\s+(\d+)/);
+      if (!match) break;
+      const ppid = parseInt(match[1], 10);
+      if (ppid <= 1) break;
+      if (ancestors.has(ppid)) break;
+      ancestors.add(ppid);
+      current = ppid;
+    } catch {
+      break;
+    }
+  }
+}
+
+/**
+ * @description macOSでps -eo pid=,ppid=から全プロセスのpid→ppidマップを構築し祖先を走査
+ * @param pid - 起点プロセスID
+ * @param ancestors - 結果を蓄積するSet(変更される)
+ */
+async function getAncestorsMacOS(pid: number, ancestors: Set<number>): Promise<void> {
+  try {
+    const { stdout } = await execFileAsync("ps", ["-eo", "pid=,ppid="], { timeout: 5000 });
+    const pidToParent = new Map<number, number>();
+    for (const line of stdout.split("\n")) {
+      const match = line.trim().match(/^(\d+)\s+(\d+)$/);
+      if (!match) continue;
+      pidToParent.set(parseInt(match[1], 10), parseInt(match[2], 10));
+    }
+
+    let current = pidToParent.get(pid);
+    for (let i = 0; i < MAX_ANCESTOR_DEPTH && current !== undefined && current > 0; i++) {
+      if (ancestors.has(current)) break;
+      ancestors.add(current);
+      current = pidToParent.get(current);
+    }
+  } catch {
+    // ps失敗時は空のまま返す(呼び出し元でppidフォールバック)
+  }
 }
