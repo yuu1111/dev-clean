@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parsePorts } from "../src/cli.js";
+import { parsePorts } from "../src/parse.js";
 
 describe("parsePorts", () => {
   it("parses a single port", () => {
