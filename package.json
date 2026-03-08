@@ -24,7 +24,10 @@
     "port"
   ],
   "author": "yuu1111",
-  "repository": "yuu1111/dev-clean",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yuu1111/dev-clean.git"
+  },
   "engines": {
     "node": ">=18.3.0"
   },
