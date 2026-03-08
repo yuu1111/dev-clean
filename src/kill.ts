@@ -5,6 +5,16 @@ import type { ProcessInfo, Result } from "./types";
 const execFileAsync = promisify(execFile);
 
 /**
+ * @description SIGTERM送信後にプロセス終了を待機する猶予時間(ミリ秒)
+ */
+const SIGTERM_GRACE_MS = 500;
+
+/**
+ * @description Windows taskkillコマンドのタイムアウト(ミリ秒)
+ */
+const TASKKILL_TIMEOUT_MS = 5000;
+
+/**
  * @description プロセスリストを並列停止し結果を返す
  * @param processes - 停止対象のプロセス一覧
  * @returns 停止結果(成功PID・エラー一覧)
@@ -43,13 +53,15 @@ async function killOne(pid: number): Promise<void> {
     throw err;
   }
 
-  await sleep(500);
+  await sleep(SIGTERM_GRACE_MS);
 
   if (!isAlive(pid)) return;
 
   if (process.platform === "win32") {
     try {
-      await execFileAsync("taskkill", ["/F", "/PID", String(pid)], { timeout: 5000 });
+      await execFileAsync("taskkill", ["/F", "/PID", String(pid)], {
+        timeout: TASKKILL_TIMEOUT_MS,
+      });
     } catch {
       // プロセスが既に終了している可能性
     }

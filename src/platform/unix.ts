@@ -249,4 +249,9 @@ async function getAncestorsMacOS(pid: number, ancestors: Set<number>): Promise<v
   }
 }
 
-const _: Platform = { listProcesses, listPortProcesses, getProcessCwds, getAncestorPids };
+export default {
+  listProcesses,
+  listPortProcesses,
+  getProcessCwds,
+  getAncestorPids,
+} satisfies Platform;

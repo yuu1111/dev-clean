@@ -144,7 +144,7 @@ function normalizePath(p: string): string {
  */
 async function loadPlatform(): Promise<Platform> {
   if (process.platform === "win32") {
-    return await import("./platform/windows");
+    return (await import("./platform/windows")).default;
   }
-  return await import("./platform/unix");
+  return (await import("./platform/unix")).default;
 }

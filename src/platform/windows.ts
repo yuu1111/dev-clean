@@ -21,7 +21,7 @@ interface RawProcess {
 }
 
 /**
- * @description 全プロセスデータのキャッシュ(1回のPowerShell呼び出しで取得)
+ * @description 全プロセスデータのキャッシュ
  */
 let cachedProcesses: Promise<RawProcess[]> | null = null;
 
@@ -164,4 +164,9 @@ export async function getProcessCwds(pids: number[]): Promise<Map<number, string
   return result;
 }
 
-const _: Platform = { listProcesses, listPortProcesses, getProcessCwds, getAncestorPids };
+export default {
+  listProcesses,
+  listPortProcesses,
+  getProcessCwds,
+  getAncestorPids,
+} satisfies Platform;
