@@ -42,7 +42,11 @@ export async function listPortProcesses(ports: number[]): Promise<Map<number, nu
   try {
     return await listPortsLsof(ports);
   } catch {
-    return await listPortsSs(ports);
+    // ssはLinux専用、macOSには存在しない
+    if (process.platform === "linux") {
+      return await listPortsSs(ports);
+    }
+    return new Map();
   }
 }
 
