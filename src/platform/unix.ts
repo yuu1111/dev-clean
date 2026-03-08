@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ProcessInfo } from "../types.js";
-import { parsePortFromAddr, TARGET_NAMES } from "../types.js";
+import { isTargetProcess, parsePortFromAddr } from "../types.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -26,7 +26,7 @@ export async function listProcesses(): Promise<ProcessInfo[]> {
     const args = match[3];
 
     const baseName = comm.split("/").pop() ?? comm;
-    if (!TARGET_NAMES.has(baseName)) continue;
+    if (!isTargetProcess(baseName)) continue;
     results.push({ pid, name: baseName, command: args });
   }
   return results;

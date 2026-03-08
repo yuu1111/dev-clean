@@ -6,27 +6,17 @@ import { isTargetProcess, parsePortFromAddr } from "../types.js";
 const execFileAsync = promisify(execFile);
 
 /**
- * @description Windowsのプロセス一覧を取得する(pwsh優先、wmic fallback)
+ * @description Get-CimInstanceでWindowsのプロセス一覧を取得
  * @returns 対象プロセスの一覧
  */
 export async function listProcesses(): Promise<ProcessInfo[]> {
-  try {
-    return await listProcessesPwsh();
-  } catch {
-    return await listProcessesWmic();
-  }
-}
-
-/**
- * @description pwshのGet-CimInstanceでプロセス一覧を取得
- * @returns 対象プロセスの一覧
- */
-async function listProcessesPwsh(): Promise<ProcessInfo[]> {
   const script =
     "Get-CimInstance Win32_Process | Select-Object ProcessId,Name,CommandLine | ConvertTo-Json -Compress";
-  const { stdout } = await execFileAsync("pwsh", ["-NoProfile", "-Command", script], {
-    timeout: 10000,
-  });
+  const { stdout } = await execFileAsync(
+    "powershell.exe",
+    ["-NoProfile", "-Command", script],
+    { timeout: 10000 },
+  );
 
   const raw = JSON.parse(stdout);
   const items: Array<{ ProcessId: number; Name: string; CommandLine: string | null }> =
@@ -40,32 +30,6 @@ async function listProcessesPwsh(): Promise<ProcessInfo[]> {
       name: item.Name,
       command: item.CommandLine ?? "",
     });
-  }
-  return results;
-}
-
-/**
- * @description wmicでプロセス一覧を取得(pwsh利用不可時のfallback)
- * @returns 対象プロセスの一覧
- */
-async function listProcessesWmic(): Promise<ProcessInfo[]> {
-  const { stdout } = await execFileAsync(
-    "wmic",
-    ["process", "get", "ProcessId,Name,CommandLine", "/format:csv"],
-    { timeout: 10000 },
-  );
-
-  const results: ProcessInfo[] = [];
-  const lines = stdout.split("\n").filter((l) => l.trim());
-  for (const line of lines.slice(1)) {
-    const parts = line.split(",");
-    if (parts.length < 4) continue;
-    const commandLine = parts.slice(1, -2).join(",");
-    const name = parts[parts.length - 2]?.trim() ?? "";
-    const pid = parseInt(parts[parts.length - 1]?.trim() ?? "", 10);
-    if (Number.isNaN(pid)) continue;
-    if (!isTargetProcess(name)) continue;
-    results.push({ pid, name, command: commandLine.trim() });
   }
   return results;
 }
