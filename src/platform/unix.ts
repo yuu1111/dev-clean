@@ -51,6 +51,21 @@ export async function listPortProcesses(ports: number[]): Promise<Map<number, nu
 }
 
 /**
+ * @description lsof出力の1行からport, pidを抽出
+ * @param line - lsof出力の1行
+ * @returns {port, pid} またはパース失敗時null
+ */
+function parseLsofLine(line: string): { port: number; pid: number } | null {
+  const parts = line.trim().split(/\s+/);
+  if (parts.length < 9) return null;
+  const pid = parseInt(parts[1], 10);
+  if (Number.isNaN(pid)) return null;
+  const port = parsePortFromAddr(parts[8]);
+  if (port === null) return null;
+  return { port, pid };
+}
+
+/**
  * @description lsofでLISTEN中のポートとPIDを取得
  * @param ports - 検索対象のポート番号
  * @returns port→PIDのマッピング
@@ -64,16 +79,28 @@ async function listPortsLsof(ports: number[]): Promise<Map<number, number>> {
   const portToPid = new Map<number, number>();
 
   for (const line of stdout.split("\n").slice(1)) {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 9) continue;
-    const pid = parseInt(parts[1], 10);
-    if (Number.isNaN(pid)) continue;
-    const port = parsePortFromAddr(parts[8]);
-    if (port === null) continue;
-    portToPid.set(port, pid);
+    const entry = parseLsofLine(line);
+    if (entry) portToPid.set(entry.port, entry.pid);
   }
   return portToPid;
 }
+
+/**
+ * @description ss出力の1行からport, pidを抽出
+ * @param line - ss出力の1行
+ * @returns {port, pid} またはパース失敗時null
+ */
+function parseSsLine(line: string): { port: number; pid: number } | null {
+  const parts = line.trim().split(/\s+/);
+  if (parts.length < 6) return null;
+  const port = parsePortFromAddr(parts[3]);
+  if (port === null) return null;
+  const pidMatch = line.match(/pid=(\d+)/);
+  if (!pidMatch) return null;
+  const pid = parseInt(pidMatch[1], 10);
+  return { port, pid };
+}
+
 
 /**
  * @description ssコマンドでLISTEN中のポートとPIDを取得(lsof利用不可時のfallback)
@@ -87,16 +114,10 @@ async function listPortsSs(ports: number[]): Promise<Map<number, number>> {
   const portToPid = new Map<number, number>();
 
   for (const line of stdout.split("\n").slice(1)) {
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 6) continue;
-    const port = parsePortFromAddr(parts[3]);
-    if (port === null) continue;
-    if (!portSet.has(port)) continue;
-
-    const pidMatch = line.match(/pid=(\d+)/);
-    if (!pidMatch) continue;
-    const pid = parseInt(pidMatch[1], 10);
-    portToPid.set(port, pid);
+    const entry = parseSsLine(line);
+    if (entry && portSet.has(entry.port)) {
+      portToPid.set(entry.port, entry.pid);
+    }
   }
   return portToPid;
 }
