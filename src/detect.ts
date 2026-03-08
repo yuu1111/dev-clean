@@ -51,12 +51,11 @@ async function detectByPort(
     pidToPort.set(pid, port);
   }
 
-  const portPids = new Set(portMap.values());
   const results: ProcessInfo[] = [];
 
   for (const proc of processes) {
     if (proc.pid === selfPid || proc.pid === parentPid) continue;
-    if (!portPids.has(proc.pid)) continue;
+    if (!pidToPort.has(proc.pid)) continue;
     results.push({ ...proc, port: pidToPort.get(proc.pid) });
   }
 
@@ -85,13 +84,13 @@ async function detectByCwd(
   parentPid: number,
 ): Promise<ProcessInfo[]> {
   const processes = await platform.listProcesses();
-  const normalizedCwd = normalizePath(resolve(cwd));
   const isWin = process.platform === "win32";
+  const normalizedCwd = normalizePath(resolve(cwd));
+  const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
 
   return processes.filter((proc) => {
     if (proc.pid === selfPid || proc.pid === parentPid) return false;
     const cmd = isWin ? normalizePath(proc.command).toLowerCase() : proc.command;
-    const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
     return cmd.includes(target);
   });
 }

@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ProcessInfo } from "../types.js";
-import { TARGET_NAMES } from "../types.js";
+import { parsePortFromAddr, TARGET_NAMES } from "../types.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -51,7 +51,8 @@ export async function listPortProcesses(ports: number[]): Promise<Map<number, nu
  * @returns port→PIDのマッピング
  */
 async function listPortsLsof(ports: number[]): Promise<Map<number, number>> {
-  const { stdout } = await execFileAsync("lsof", ["-iTCP", "-sTCP:LISTEN", "-nP"], {
+  const portArgs = ports.flatMap((p) => [`-iTCP:${p}`]);
+  const { stdout } = await execFileAsync("lsof", [...portArgs, "-sTCP:LISTEN", "-nP"], {
     timeout: 10000,
   });
 
@@ -63,11 +64,8 @@ async function listPortsLsof(ports: number[]): Promise<Map<number, number>> {
     if (parts.length < 9) continue;
     const pid = parseInt(parts[1], 10);
     if (Number.isNaN(pid)) continue;
-    const nameField = parts[8];
-    const colonIdx = nameField.lastIndexOf(":");
-    if (colonIdx === -1) continue;
-    const port = parseInt(nameField.slice(colonIdx + 1), 10);
-    if (Number.isNaN(port)) continue;
+    const port = parsePortFromAddr(parts[8]);
+    if (port === null) continue;
     if (portSet.has(port)) {
       portToPid.set(port, pid);
     }
@@ -89,11 +87,8 @@ async function listPortsSs(ports: number[]): Promise<Map<number, number>> {
   for (const line of stdout.split("\n").slice(1)) {
     const parts = line.trim().split(/\s+/);
     if (parts.length < 6) continue;
-    const localAddr = parts[3];
-    const colonIdx = localAddr.lastIndexOf(":");
-    if (colonIdx === -1) continue;
-    const port = parseInt(localAddr.slice(colonIdx + 1), 10);
-    if (Number.isNaN(port)) continue;
+    const port = parsePortFromAddr(parts[3]);
+    if (port === null) continue;
     if (!portSet.has(port)) continue;
 
     const pidMatch = line.match(/pid=(\d+)/);

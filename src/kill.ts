@@ -5,21 +5,24 @@ import type { ProcessInfo, Result } from "./types.js";
 const execFileAsync = promisify(execFile);
 
 /**
- * @description プロセスリストを順次停止し結果を返す
+ * @description プロセスリストを並列停止し結果を返す
  * @param processes - 停止対象のプロセス一覧
  * @returns 停止結果(成功PID・エラー一覧)
  */
 export async function killProcesses(processes: ProcessInfo[]): Promise<Result> {
+  const results = await Promise.allSettled(processes.map((proc) => killOne(proc.pid)));
+
   const killed: number[] = [];
   const errors: Array<{ pid: number; message: string }> = [];
 
-  for (const proc of processes) {
-    try {
-      await killOne(proc.pid);
-      killed.push(proc.pid);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      errors.push({ pid: proc.pid, message });
+  for (let i = 0; i < results.length; i++) {
+    const result = results[i];
+    if (result.status === "fulfilled") {
+      killed.push(processes[i].pid);
+    } else {
+      const message =
+        result.reason instanceof Error ? result.reason.message : String(result.reason);
+      errors.push({ pid: processes[i].pid, message });
     }
   }
 

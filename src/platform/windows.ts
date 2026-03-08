@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { ProcessInfo } from "../types.js";
-import { TARGET_NAMES } from "../types.js";
+import { isTargetProcess, parsePortFromAddr } from "../types.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -34,9 +34,7 @@ async function listProcessesPwsh(): Promise<ProcessInfo[]> {
 
   const results: ProcessInfo[] = [];
   for (const item of items) {
-    const name = item.Name?.toLowerCase() ?? "";
-    const baseName = name.replace(/\.exe$/, "");
-    if (!TARGET_NAMES.has(name) && !TARGET_NAMES.has(baseName)) continue;
+    if (!isTargetProcess(item.Name ?? "")) continue;
     results.push({
       pid: item.ProcessId,
       name: item.Name,
@@ -66,9 +64,7 @@ async function listProcessesWmic(): Promise<ProcessInfo[]> {
     const name = parts[parts.length - 2]?.trim() ?? "";
     const pid = parseInt(parts[parts.length - 1]?.trim() ?? "", 10);
     if (Number.isNaN(pid)) continue;
-    const lowerName = name.toLowerCase();
-    const baseName = lowerName.replace(/\.exe$/, "");
-    if (!TARGET_NAMES.has(lowerName) && !TARGET_NAMES.has(baseName)) continue;
+    if (!isTargetProcess(name)) continue;
     results.push({ pid, name, command: commandLine.trim() });
   }
   return results;
@@ -88,13 +84,10 @@ export async function listPortProcesses(ports: number[]): Promise<Map<number, nu
     if (!line.includes("LISTENING")) continue;
     const parts = line.trim().split(/\s+/);
     if (parts.length < 5) continue;
-    const localAddr = parts[1];
     const pid = parseInt(parts[4], 10);
     if (Number.isNaN(pid)) continue;
-    const colonIdx = localAddr.lastIndexOf(":");
-    if (colonIdx === -1) continue;
-    const port = parseInt(localAddr.slice(colonIdx + 1), 10);
-    if (Number.isNaN(port)) continue;
+    const port = parsePortFromAddr(parts[1]);
+    if (port === null) continue;
     if (portSet.has(port)) {
       portToPid.set(port, pid);
     }

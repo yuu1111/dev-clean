@@ -57,3 +57,26 @@ export const TARGET_NAMES = new Set([
   "tsx",
   "ts-node",
 ]);
+
+/**
+ * @description プロセス名がTARGET_NAMESに含まれるか判定(大文字小文字・.exe無視)
+ * @param name - プロセス名
+ * @returns 対象プロセスならtrue
+ */
+export function isTargetProcess(name: string): boolean {
+  const lower = name.toLowerCase();
+  const base = lower.replace(/\.exe$/, "");
+  return TARGET_NAMES.has(lower) || TARGET_NAMES.has(base);
+}
+
+/**
+ * @description "address:port" 形式の文字列からポート番号を抽出
+ * @param addr - アドレス文字列
+ * @returns ポート番号、パース不能ならnull
+ */
+export function parsePortFromAddr(addr: string): number | null {
+  const colonIdx = addr.lastIndexOf(":");
+  if (colonIdx === -1) return null;
+  const port = parseInt(addr.slice(colonIdx + 1), 10);
+  return Number.isNaN(port) ? null : port;
+}
