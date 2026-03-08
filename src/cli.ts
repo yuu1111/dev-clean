@@ -1,3 +1,4 @@
+import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
@@ -16,7 +17,12 @@ async function main(): Promise<void> {
   try {
     options = parseCliArgs();
   } catch (err) {
-    error(err instanceof Error ? err.message : String(err));
+    const msg = err instanceof Error ? err.message : String(err);
+    if (process.argv.includes("--json")) {
+      write({ error: msg });
+    } else {
+      error(msg);
+    }
     process.exit(1);
   }
 
@@ -81,7 +87,7 @@ function parseCliArgs(): CliOptions {
     strict: true,
     options: {
       cwd: { type: "string" },
-      port: { type: "string", short: "p" },
+      port: { type: "string", short: "p", multiple: true },
       yes: { type: "boolean", short: "y", default: false },
       json: { type: "boolean", default: false },
       "dry-run": { type: "boolean", default: false },
@@ -90,10 +96,18 @@ function parseCliArgs(): CliOptions {
     },
   });
 
-  const ports = values.port ? parsePorts(values.port) : [];
+  const ports = values.port ? values.port.flatMap(parsePorts) : [];
+
+  const cwd = resolve(values.cwd ?? process.cwd());
+  if (!existsSync(cwd)) {
+    throw new Error(`--cwd path does not exist: ${values.cwd}`);
+  }
+  if (!statSync(cwd).isDirectory()) {
+    throw new Error(`--cwd path is not a directory: ${values.cwd}`);
+  }
 
   return {
-    cwd: values.cwd ?? process.cwd(),
+    cwd,
     ports,
     yes: values.yes ?? false,
     json: values.json ?? false,
@@ -200,6 +214,11 @@ function write(data: unknown): void {
 }
 
 main().catch((err) => {
-  error(err instanceof Error ? err.message : String(err));
+  const msg = err instanceof Error ? err.message : String(err);
+  if (process.argv.includes("--json")) {
+    write({ error: msg });
+  } else {
+    error(msg);
+  }
   process.exit(1);
 });

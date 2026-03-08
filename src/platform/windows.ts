@@ -1,8 +1,21 @@
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { promisify } from "node:util";
 import { addPpidFallback, isTargetProcess, parsePortFromAddr, walkAncestors } from "../process";
 import type { Platform, ProcessInfo } from "../types";
-import procCwdCsharp from "./ProcCwd.cs";
+// esbuild --loader:.cs=text でバンドル時はファイル内容、bun実行時はファイルパスになる
+import rawProcCwdCsharp from "./ProcCwd.cs";
+
+/**
+ * @description ProcCwd.csのC#ソースコードを取得
+ * @returns C#ソースコード文字列
+ */
+function getProcCwdCsharp(): string {
+  if (rawProcCwdCsharp.endsWith(".cs")) {
+    return readFileSync(rawProcCwdCsharp, "utf-8");
+  }
+  return rawProcCwdCsharp;
+}
 
 const execFileAsync = promisify(execFile);
 
@@ -118,15 +131,16 @@ export async function getAncestorPids(pid: number): Promise<Set<number>> {
 
 /**
  * @description C#コードをAdd-Typeで読み込みCWDを取得するPowerShellスクリプトを構築
+ * @param pids - 対象プロセスIDの配列
  * @returns PowerShellスクリプト文字列
  */
-function buildCwdScript(): string {
-  return `$pids = @($args)
-Add-Type -TypeDefinition @'
-${procCwdCsharp}
+function buildCwdScript(pids: number[]): string {
+  const pidLiteral = pids.join(",");
+  return `Add-Type -TypeDefinition @'
+${getProcCwdCsharp()}
 '@ -ErrorAction Stop
 
-$map = [ProcCwd]::GetCwds($pids)
+$map = [ProcCwd]::GetCwds(@(${pidLiteral}))
 $map.GetEnumerator() | ForEach-Object {
     [PSCustomObject]@{ Pid = $_.Key; Cwd = $_.Value }
 } | ConvertTo-Json -Compress`;
@@ -144,7 +158,7 @@ export async function getProcessCwds(pids: number[]): Promise<Map<number, string
   try {
     const { stdout } = await execFileAsync(
       "powershell.exe",
-      ["-NoProfile", "-Command", buildCwdScript(), ...pids.map(String)],
+      ["-NoProfile", "-Command", buildCwdScript(pids)],
       { timeout: 15000 },
     );
     const trimmed = stdout.trim();

@@ -10,9 +10,11 @@ export function parsePorts(input: string): number[] {
   for (const seg of segments) {
     const trimmed = seg.trim();
     if (trimmed.includes("-")) {
-      const [startStr, endStr] = trimmed.split("-");
-      const start = parseInt(startStr, 10);
-      const end = parseInt(endStr, 10);
+      const dashIdx = trimmed.indexOf("-");
+      const startStr = trimmed.slice(0, dashIdx).trim();
+      const endStr = trimmed.slice(dashIdx + 1).trim();
+      const start = parseStrictInt(startStr);
+      const end = parseStrictInt(endStr);
       if (Number.isNaN(start) || Number.isNaN(end))
         throw new Error(`Invalid port range: ${trimmed}`);
       if (start > end) throw new Error(`Invalid port range: ${trimmed}`);
@@ -22,13 +24,22 @@ export function parsePorts(input: string): number[] {
         ports.push(p);
       }
     } else {
-      const p = parseInt(trimmed, 10);
-      if (Number.isNaN(p)) throw new Error(`Invalid port: ${trimmed}`);
+      const p = parseStrictInt(trimmed);
       validatePort(p);
       ports.push(p);
     }
   }
   return ports;
+}
+
+/**
+ * @description 文字列を厳密に整数パースする(先頭ゼロ・符号・小数点等を拒否)
+ * @param s - パース対象の文字列
+ * @returns パースされた整数
+ */
+function parseStrictInt(s: string): number {
+  if (!/^[1-9]\d*$/.test(s)) throw new Error(`Invalid port: ${s}`);
+  return parseInt(s, 10);
 }
 
 /**
