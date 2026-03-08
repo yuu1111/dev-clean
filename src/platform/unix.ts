@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
 import { readlink } from "node:fs/promises";
 import { promisify } from "node:util";
-import type { ProcessInfo } from "../types.js";
-import { isTargetProcess, parsePortFromAddr } from "../types.js";
+import type { ProcessInfo } from "../types";
+import { isTargetProcess, parsePortFromAddr } from "../types";
 
 const execFileAsync = promisify(execFile);
 

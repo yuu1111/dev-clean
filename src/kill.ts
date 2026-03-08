@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import type { ProcessInfo, Result } from "./types.js";
+import type { ProcessInfo, Result } from "./types";
 
 const execFileAsync = promisify(execFile);
 

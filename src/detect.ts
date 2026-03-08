@@ -1,5 +1,5 @@
 import { normalize, resolve } from "node:path";
-import type { ProcessInfo } from "./types.js";
+import type { ProcessInfo } from "./types";
 
 /**
  * @description 検出オプション
@@ -146,7 +146,7 @@ interface Platform {
  */
 async function loadPlatform(): Promise<Platform> {
   if (process.platform === "win32") {
-    return await import("./platform/windows.js");
+    return await import("./platform/windows");
   }
-  return await import("./platform/unix.js");
+  return await import("./platform/unix");
 }

@@ -1,13 +1,11 @@
-#!/usr/bin/env node
-
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { detect } from "./detect.js";
-import { killProcesses } from "./kill.js";
-import type { CliOptions, ProcessInfo, Result } from "./types.js";
+import { detect } from "./detect";
+import { killProcesses } from "./kill";
+import type { CliOptions, ProcessInfo, Result } from "./types";
 
 /**
  * @description CLIエントリポイント
