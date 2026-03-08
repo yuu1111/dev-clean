@@ -193,7 +193,7 @@ async function getProcessCwdsMacOS(pids: number[]): Promise<Map<number, string>>
  * @param pid - 起点プロセスID
  * @returns 祖先PIDのSet(自身は含まない)
  */
-export async function getAncestorPids(pid: number): Promise<Set<number>> {
+async function getAncestorPids(pid: number): Promise<Set<number>> {
   const ancestors = new Set<number>();
   if (process.platform === "linux") {
     await getAncestorsLinux(pid, ancestors);
