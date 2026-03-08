@@ -1,6 +1,6 @@
 {
   "name": "dev-clean",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Detect and kill lingering dev server processes",
   "type": "module",
   "bin": {
