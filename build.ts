@@ -1,5 +1,7 @@
 import { build } from "esbuild";
 
+const pkg = await Bun.file("package.json").json();
+
 await build({
 	entryPoints: ["src/cli.ts"],
 	bundle: true,
@@ -8,6 +10,7 @@ await build({
 	outfile: "dist/cli.js",
 	banner: { js: "#!/usr/bin/env node" },
 	minify: true,
+	define: { __VERSION__: JSON.stringify(pkg.version) },
 	plugins: [
 		{
 			name: "cs-minify",

@@ -1,9 +1,10 @@
 import { existsSync, statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { createInterface } from "node:readline";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+
+declare const __VERSION__: string;
+
 import { detect } from "./detect";
 import { killProcesses } from "./kill";
 import { parsePorts } from "./parse";
@@ -32,7 +33,7 @@ async function main(): Promise<void> {
   }
 
   if (options.version) {
-    await printVersion();
+    printVersion();
     return;
   }
 
@@ -183,18 +184,10 @@ Options:
 }
 
 /**
- * @description package.jsonからバージョンを読み取って表示
+ * @description バージョンを表示(ビルド時に埋め込み)
  */
-async function printVersion(): Promise<void> {
-  try {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const pkgPath = resolve(__dirname, "..", "package.json");
-    const pkg = JSON.parse(await readFile(pkgPath, "utf-8"));
-    info(pkg.version);
-  } catch {
-    info("unknown");
-  }
+function printVersion(): void {
+  info(__VERSION__);
 }
 
 /**
