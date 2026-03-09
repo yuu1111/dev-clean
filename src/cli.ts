@@ -171,16 +171,20 @@ async function confirm(question: string): Promise<boolean> {
  * @description ヘルプメッセージを表示
  */
 function printHelp(): void {
-  info(`Usage: dev-clean [options]
-
-Options:
-  --cwd <path>    Target project path (default: current directory)
-  -p, --port <ports>  Port(s) to check (e.g. 3000, 3000-3005, 3000,5173)
-  -y, --yes       Kill without confirmation
-  --json          Output as JSON (to stdout)
-  --dry-run       Detect only, don't kill
-  -v, --version   Show version
-  -h, --help      Show this help`);
+  info(
+    [
+      "Usage: dev-clean [options]",
+      "",
+      "Options:",
+      "  --cwd <path>    Target project path (default: current directory)",
+      "  -p, --port <ports>  Port(s) to check (e.g. 3000, 3000-3005, 3000,5173)",
+      "  -y, --yes       Kill without confirmation",
+      "  --json          Output as JSON (to stdout)",
+      "  --dry-run       Detect only, don't kill",
+      "  -v, --version   Show version",
+      "  -h, --help      Show this help",
+    ].join("\n"),
+  );
 }
 
 /**
@@ -195,7 +199,7 @@ function printVersion(): void {
  * @param msg - メッセージ
  */
 function info(msg: string): void {
-  process.stderr.write(`${msg}\n`);
+  process.stderr.write(msg + "\n");
 }
 
 /**
@@ -203,7 +207,7 @@ function info(msg: string): void {
  * @param msg - メッセージ
  */
 function error(msg: string): void {
-  process.stderr.write(`Error: ${msg}\n`);
+  process.stderr.write("Error: " + msg + "\n");
 }
 
 /**
@@ -211,7 +215,7 @@ function error(msg: string): void {
  * @param data - 出力するデータ
  */
 function write(data: unknown): void {
-  process.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
+  process.stdout.write(JSON.stringify(data, null, 2) + "\n");
 }
 
 main().catch((err) => {

@@ -148,15 +148,17 @@ async function getAncestorPids(pid: number): Promise<Set<number>> {
  */
 function buildCwdScript(pids: number[]): string {
   const pidLiteral = pids.join(",");
-  return `${PS_UTF8_PREFIX}
-Add-Type -TypeDefinition @'
-${getProcCwdCsharp()}
-'@ -ErrorAction Stop
-
-$map = [ProcCwd]::GetCwds(@(${pidLiteral}))
-$map.GetEnumerator() | ForEach-Object {
-    [PSCustomObject]@{ Pid = $_.Key; Cwd = $_.Value }
-} | ConvertTo-Json -Compress`;
+  return [
+    PS_UTF8_PREFIX,
+    "Add-Type -TypeDefinition @'",
+    getProcCwdCsharp(),
+    "'@ -ErrorAction Stop",
+    "",
+    `$map = [ProcCwd]::GetCwds(@(${pidLiteral}))`,
+    "$map.GetEnumerator() | ForEach-Object {",
+    "    [PSCustomObject]@{ Pid = $_.Key; Cwd = $_.Value }",
+    "} | ConvertTo-Json -Compress",
+  ].join("\n");
 }
 
 /**
