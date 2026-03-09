@@ -2,12 +2,12 @@ import { build } from "esbuild";
 
 const pkg = await Bun.file("package.json").json();
 
-await build({
+const result = await build({
 	entryPoints: ["src/cli.ts"],
 	bundle: true,
 	platform: "node",
 	format: "esm",
-	outfile: "dist/cli.js",
+	write: false,
 	banner: { js: "#!/usr/bin/env node" },
 	minify: true,
 	define: { __VERSION__: JSON.stringify(pkg.version) },
@@ -43,3 +43,11 @@ await build({
 		},
 	],
 });
+
+const code = new TextDecoder().decode(result.outputFiles[0].contents);
+const [shebang, ...rest] = code.split("\n");
+const js = rest.join("\n").replace(/`([^`]*)`/g, (_, inner) => {
+	if (!inner.includes("\n")) return `\`${inner}\``;
+	return `\`${inner.replaceAll("\n", "\\n")}\``;
+});
+await Bun.write("dist/cli.js", shebang + "\n" + js);
