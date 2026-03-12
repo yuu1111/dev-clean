@@ -7,8 +7,8 @@ import type { Platform, ProcessInfo } from "./types";
  * @property ports - 対象ポート番号
  */
 interface DetectOptions {
-  cwd: string;
-  ports: number[];
+	cwd: string;
+	ports: number[];
 }
 
 /**
@@ -17,26 +17,26 @@ interface DetectOptions {
  * @returns 検出されたプロセス一覧
  */
 export async function detect(options: DetectOptions): Promise<ProcessInfo[]> {
-  const platform = await loadPlatform();
+	const platform = await loadPlatform();
 
-  if (options.ports.length > 0) {
-    // getAncestorPids, listProcesses, listPortProcesses を全て並列実行
-    const [excludePids, processes, portMap] = await Promise.all([
-      platform.getAncestorPids(process.pid),
-      platform.listProcesses(),
-      platform.listPortProcesses(options.ports),
-    ]);
-    excludePids.add(process.pid);
-    return filterByPort(processes, portMap, excludePids);
-  }
+	if (options.ports.length > 0) {
+		// getAncestorPids, listProcesses, listPortProcesses を全て並列実行
+		const [excludePids, processes, portMap] = await Promise.all([
+			platform.getAncestorPids(process.pid),
+			platform.listProcesses(),
+			platform.listPortProcesses(options.ports),
+		]);
+		excludePids.add(process.pid);
+		return filterByPort(processes, portMap, excludePids);
+	}
 
-  // getAncestorPids と listProcesses を並列実行
-  const [excludePids, processes] = await Promise.all([
-    platform.getAncestorPids(process.pid),
-    platform.listProcesses(),
-  ]);
-  excludePids.add(process.pid);
-  return await filterByCwd(platform, processes, options.cwd, excludePids);
+	// getAncestorPids と listProcesses を並列実行
+	const [excludePids, processes] = await Promise.all([
+		platform.getAncestorPids(process.pid),
+		platform.listProcesses(),
+	]);
+	excludePids.add(process.pid);
+	return await filterByCwd(platform, processes, options.cwd, excludePids);
 }
 
 /**
@@ -47,34 +47,34 @@ export async function detect(options: DetectOptions): Promise<ProcessInfo[]> {
  * @returns 検出されたプロセス一覧
  */
 function filterByPort(
-  processes: ProcessInfo[],
-  portMap: Map<number, number>,
-  excludePids: Set<number>,
+	processes: ProcessInfo[],
+	portMap: Map<number, number>,
+	excludePids: Set<number>,
 ): ProcessInfo[] {
-  const pidToPort = new Map<number, number>();
-  for (const [port, pid] of portMap) {
-    pidToPort.set(pid, port);
-  }
+	const pidToPort = new Map<number, number>();
+	for (const [port, pid] of portMap) {
+		pidToPort.set(pid, port);
+	}
 
-  const results: ProcessInfo[] = [];
-  const addedPids = new Set<number>();
+	const results: ProcessInfo[] = [];
+	const addedPids = new Set<number>();
 
-  for (const proc of processes) {
-    if (excludePids.has(proc.pid)) continue;
-    const port = pidToPort.get(proc.pid);
-    if (port === undefined) continue;
-    results.push({ ...proc, port });
-    addedPids.add(proc.pid);
-  }
+	for (const proc of processes) {
+		if (excludePids.has(proc.pid)) continue;
+		const port = pidToPort.get(proc.pid);
+		if (port === undefined) continue;
+		results.push({ ...proc, port });
+		addedPids.add(proc.pid);
+	}
 
-  // ポートを使っているがTARGET_NAMESに含まれないプロセスも含める
-  for (const [port, pid] of portMap) {
-    if (excludePids.has(pid)) continue;
-    if (addedPids.has(pid)) continue;
-    results.push({ pid, name: "unknown", command: "", port });
-  }
+	// ポートを使っているがTARGET_NAMESに含まれないプロセスも含める
+	for (const [port, pid] of portMap) {
+		if (excludePids.has(pid)) continue;
+		if (addedPids.has(pid)) continue;
+		results.push({ pid, name: "unknown", command: "", port });
+	}
 
-  return results;
+	return results;
 }
 
 /**
@@ -86,34 +86,36 @@ function filterByPort(
  * @returns 検出されたプロセス一覧
  */
 async function filterByCwd(
-  platform: Platform,
-  processes: ProcessInfo[],
-  cwd: string,
-  excludePids: Set<number>,
+	platform: Platform,
+	processes: ProcessInfo[],
+	cwd: string,
+	excludePids: Set<number>,
 ): Promise<ProcessInfo[]> {
-  const isWin = process.platform === "win32";
-  const normalizedCwd = normalizePath(resolve(cwd));
-  const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
+	const isWin = process.platform === "win32";
+	const normalizedCwd = normalizePath(resolve(cwd));
+	const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
 
-  const candidates = processes.filter((proc) => !excludePids.has(proc.pid));
+	const candidates = processes.filter((proc) => !excludePids.has(proc.pid));
 
-  let cwdMap = new Map<number, string>();
-  try {
-    const pids = candidates.map((p) => p.pid);
-    if (pids.length > 0) {
-      cwdMap = await platform.getProcessCwds(pids);
-    }
-  } catch {
-    // getProcessCwds失敗時はCWD検証不能のため空結果を返す
-  }
+	let cwdMap = new Map<number, string>();
+	try {
+		const pids = candidates.map((p) => p.pid);
+		if (pids.length > 0) {
+			cwdMap = await platform.getProcessCwds(pids);
+		}
+	} catch {
+		// getProcessCwds失敗時はCWD検証不能のため空結果を返す
+	}
 
-  return candidates.filter((proc) => {
-    const procCwd = cwdMap.get(proc.pid);
-    if (!procCwd) return false;
-    const normalized = isWin ? normalizePath(procCwd).toLowerCase() : normalizePath(procCwd);
-    // target自体に一致、またはtarget配下のサブディレクトリ
-    return normalized === target || normalized.startsWith(`${target}/`);
-  });
+	return candidates.filter((proc) => {
+		const procCwd = cwdMap.get(proc.pid);
+		if (!procCwd) return false;
+		const normalized = isWin
+			? normalizePath(procCwd).toLowerCase()
+			: normalizePath(procCwd);
+		// target自体に一致、またはtarget配下のサブディレクトリ
+		return normalized === target || normalized.startsWith(`${target}/`);
+	});
 }
 
 /**
@@ -122,7 +124,7 @@ async function filterByCwd(
  * @returns 正規化されたパス
  */
 function normalizePath(p: string): string {
-  return normalize(p).replace(/\\/g, "/");
+	return normalize(p).replace(/\\/g, "/");
 }
 
 /**
@@ -130,8 +132,8 @@ function normalizePath(p: string): string {
  * @returns プラットフォームアダプタ
  */
 async function loadPlatform(): Promise<Platform> {
-  if (process.platform === "win32") {
-    return (await import("./platform/windows")).default;
-  }
-  return (await import("./platform/unix")).default;
+	if (process.platform === "win32") {
+		return (await import("./platform/windows")).default;
+	}
+	return (await import("./platform/unix")).default;
 }

@@ -20,23 +20,22 @@ const TASKKILL_TIMEOUT_MS = 5000;
  * @returns 停止結果(成功PID・エラー一覧)
  */
 export async function killProcesses(processes: ProcessInfo[]): Promise<Result> {
-  const results = await Promise.allSettled(processes.map((proc) => killOne(proc.pid)));
+	const killed: number[] = [];
+	const errors: Array<{ pid: number; message: string }> = [];
 
-  const killed: number[] = [];
-  const errors: Array<{ pid: number; message: string }> = [];
+	await Promise.allSettled(
+		processes.map(async (proc) => {
+			try {
+				await killOne(proc.pid);
+				killed.push(proc.pid);
+			} catch (err) {
+				const message = err instanceof Error ? err.message : String(err);
+				errors.push({ pid: proc.pid, message });
+			}
+		}),
+	);
 
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    if (result.status === "fulfilled") {
-      killed.push(processes[i].pid);
-    } else {
-      const message =
-        result.reason instanceof Error ? result.reason.message : String(result.reason);
-      errors.push({ pid: processes[i].pid, message });
-    }
-  }
-
-  return { found: processes, killed, errors };
+	return { found: processes, killed, errors };
 }
 
 /**
@@ -44,34 +43,34 @@ export async function killProcesses(processes: ProcessInfo[]): Promise<Result> {
  * @param pid - 停止対象のプロセスID
  */
 async function killOne(pid: number): Promise<void> {
-  try {
-    process.kill(pid, "SIGTERM");
-  } catch (err: unknown) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ESRCH") return;
-    if (code === "EPERM") throw new Error("Permission denied");
-    throw err;
-  }
+	try {
+		process.kill(pid, "SIGTERM");
+	} catch (err: unknown) {
+		const code = (err as NodeJS.ErrnoException).code;
+		if (code === "ESRCH") return;
+		if (code === "EPERM") throw new Error("Permission denied");
+		throw err;
+	}
 
-  await sleep(SIGTERM_GRACE_MS);
+	await sleep(SIGTERM_GRACE_MS);
 
-  if (!isAlive(pid)) return;
+	if (!isAlive(pid)) return;
 
-  if (process.platform === "win32") {
-    try {
-      await execFileAsync("taskkill", ["/F", "/PID", String(pid)], {
-        timeout: TASKKILL_TIMEOUT_MS,
-      });
-    } catch {
-      // プロセスが既に終了している可能性
-    }
-  } else {
-    try {
-      process.kill(pid, "SIGKILL");
-    } catch {
-      // プロセスが既に終了している可能性
-    }
-  }
+	if (process.platform === "win32") {
+		try {
+			await execFileAsync("taskkill", ["/F", "/PID", String(pid)], {
+				timeout: TASKKILL_TIMEOUT_MS,
+			});
+		} catch {
+			// プロセスが既に終了している可能性
+		}
+	} else {
+		try {
+			process.kill(pid, "SIGKILL");
+		} catch {
+			// プロセスが既に終了している可能性
+		}
+	}
 }
 
 /**
@@ -80,12 +79,12 @@ async function killOne(pid: number): Promise<void> {
  * @returns 生存していればtrue
  */
 function isAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
 }
 
 /**
@@ -93,5 +92,5 @@ function isAlive(pid: number): boolean {
  * @param ms - 待機時間(ミリ秒)
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+	return new Promise((r) => setTimeout(r, ms));
 }

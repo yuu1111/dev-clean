@@ -6,10 +6,10 @@
  * @property port - リッスン中のポート番号 @optional
  */
 export interface ProcessInfo {
-  pid: number;
-  name: string;
-  command: string;
-  port?: number;
+	pid: number;
+	name: string;
+	command: string;
+	port?: number;
 }
 
 /**
@@ -23,13 +23,13 @@ export interface ProcessInfo {
  * @property help - ヘルプ表示
  */
 export interface CliOptions {
-  cwd: string;
-  ports: number[];
-  yes: boolean;
-  json: boolean;
-  dryRun: boolean;
-  version: boolean;
-  help: boolean;
+	cwd: string;
+	ports: number[];
+	yes: boolean;
+	json: boolean;
+	dryRun: boolean;
+	version: boolean;
+	help: boolean;
 }
 
 /**
@@ -39,17 +39,17 @@ export interface CliOptions {
  * @property errors - 停止に失敗したPIDとエラーメッセージ
  */
 export interface Result {
-  found: ProcessInfo[];
-  killed: number[];
-  errors: Array<{ pid: number; message: string }>;
+	found: ProcessInfo[];
+	killed: number[];
+	errors: Array<{ pid: number; message: string }>;
 }
 
 /**
  * @description プラットフォーム固有のプロセス/ポート取得インターフェース
  */
 export interface Platform {
-  listProcesses(): Promise<ProcessInfo[]>;
-  listPortProcesses(ports: number[]): Promise<Map<number, number>>;
-  getProcessCwds(pids: number[]): Promise<Map<number, string>>;
-  getAncestorPids(pid: number): Promise<Set<number>>;
+	listProcesses(): Promise<ProcessInfo[]>;
+	listPortProcesses(ports: number[]): Promise<Map<number, number>>;
+	getProcessCwds(pids: number[]): Promise<Map<number, string>>;
+	getAncestorPids(pid: number): Promise<Set<number>>;
 }

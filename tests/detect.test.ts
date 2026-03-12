@@ -5,77 +5,85 @@ import { join } from "node:path";
 import { detect } from "../src/detect.js";
 
 describe("detect CWD-based", () => {
-  let childProc: ReturnType<typeof Bun.spawn>;
-  let testDir: string;
+	let childProc: ReturnType<typeof Bun.spawn>;
+	let testDir: string;
 
-  beforeAll(() => {
-    testDir = mkdtempSync(join(tmpdir(), "dev-clean-test-"));
-    childProc = Bun.spawn(["node", "-e", "setTimeout(()=>{},30000)"], {
-      cwd: testDir,
-      stdout: "ignore",
-      stderr: "ignore",
-    });
-  });
+	beforeAll(() => {
+		testDir = mkdtempSync(join(tmpdir(), "dev-clean-test-"));
+		childProc = Bun.spawn(["node", "-e", "setTimeout(()=>{},30000)"], {
+			cwd: testDir,
+			stdout: "ignore",
+			stderr: "ignore",
+		});
+	});
 
-  afterAll(() => {
-    childProc.kill();
-  });
+	afterAll(() => {
+		childProc.kill();
+	});
 
-  it("detects a child process by cwd", async () => {
-    const result = await detect({ cwd: testDir, ports: [] });
-    const pids = result.map((p) => p.pid);
-    // macOS CIではlsofの権限不足でCWD検出できない場合がある
-    if (pids.length === 0 && process.platform === "darwin") {
-      console.warn("skipped: CWD detection unavailable on this macOS environment");
-      return;
-    }
-    expect(pids).toContain(childProc.pid);
-  });
+	it("detects a child process by cwd", async () => {
+		const result = await detect({ cwd: testDir, ports: [] });
+		const pids = result.map((p) => p.pid);
+		// macOS CIではlsofの権限不足でCWD検出できない場合がある
+		if (pids.length === 0 && process.platform === "darwin") {
+			console.warn(
+				"skipped: CWD detection unavailable on this macOS environment",
+			);
+			return;
+		}
+		expect(pids).toContain(childProc.pid);
+	});
 });
 
 describe("detect CWD-based does not match by command line", () => {
-  let childProc: ReturnType<typeof Bun.spawn>;
-  let testDir: string;
+	let childProc: ReturnType<typeof Bun.spawn>;
+	let testDir: string;
 
-  beforeAll(() => {
-    testDir = mkdtempSync(join(tmpdir(), "dev-clean-cmdarg-"));
-    // testDirをコマンドライン引数に含むが、CWDは別の場所(tmpdir)で起動
-    childProc = Bun.spawn(["node", "-e", "setTimeout(()=>{},30000)", "--", testDir], {
-      cwd: tmpdir(),
-      stdout: "ignore",
-      stderr: "ignore",
-    });
-  });
+	beforeAll(() => {
+		testDir = mkdtempSync(join(tmpdir(), "dev-clean-cmdarg-"));
+		// testDirをコマンドライン引数に含むが、CWDは別の場所(tmpdir)で起動
+		childProc = Bun.spawn(
+			["node", "-e", "setTimeout(()=>{},30000)", "--", testDir],
+			{
+				cwd: tmpdir(),
+				stdout: "ignore",
+				stderr: "ignore",
+			},
+		);
+	});
 
-  afterAll(() => {
-    childProc.kill();
-  });
+	afterAll(() => {
+		childProc.kill();
+	});
 
-  it("does not detect process whose command line contains target path but CWD differs", async () => {
-    const result = await detect({ cwd: testDir, ports: [] });
-    const pids = result.map((p) => p.pid);
-    expect(pids).not.toContain(childProc.pid);
-  });
+	it("does not detect process whose command line contains target path but CWD differs", async () => {
+		const result = await detect({ cwd: testDir, ports: [] });
+		const pids = result.map((p) => p.pid);
+		expect(pids).not.toContain(childProc.pid);
+	});
 });
 
 describe("detect", () => {
-  it("returns an array", async () => {
-    const result = await detect({ cwd: "/nonexistent/path/that/matches/nothing", ports: [] });
-    expect(Array.isArray(result)).toBe(true);
-  });
+	it("returns an array", async () => {
+		const result = await detect({
+			cwd: "/nonexistent/path/that/matches/nothing",
+			ports: [],
+		});
+		expect(Array.isArray(result)).toBe(true);
+	});
 
-  it("does not include self PID", async () => {
-    const result = await detect({ cwd: process.cwd(), ports: [] });
-    const selfPid = process.pid;
-    const parentPid = process.ppid;
-    for (const proc of result) {
-      expect(proc.pid).not.toBe(selfPid);
-      expect(proc.pid).not.toBe(parentPid);
-    }
-  });
+	it("does not include self PID", async () => {
+		const result = await detect({ cwd: process.cwd(), ports: [] });
+		const selfPid = process.pid;
+		const parentPid = process.ppid;
+		for (const proc of result) {
+			expect(proc.pid).not.toBe(selfPid);
+			expect(proc.pid).not.toBe(parentPid);
+		}
+	});
 
-  it("returns empty for unused port", async () => {
-    const result = await detect({ cwd: process.cwd(), ports: [59999] });
-    expect(Array.isArray(result)).toBe(true);
-  });
+	it("returns empty for unused port", async () => {
+		const result = await detect({ cwd: process.cwd(), ports: [59999] });
+		expect(Array.isArray(result)).toBe(true);
+	});
 });

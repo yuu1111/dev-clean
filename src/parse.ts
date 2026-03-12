@@ -4,32 +4,33 @@
  * @returns ポート番号の配列
  */
 export function parsePorts(input: string): number[] {
-  const ports: number[] = [];
-  const segments = input.split(",");
+	const ports: number[] = [];
+	const segments = input.split(",");
 
-  for (const seg of segments) {
-    const trimmed = seg.trim();
-    if (trimmed.includes("-")) {
-      const dashIdx = trimmed.indexOf("-");
-      const startStr = trimmed.slice(0, dashIdx).trim();
-      const endStr = trimmed.slice(dashIdx + 1).trim();
-      const start = parseStrictInt(startStr);
-      const end = parseStrictInt(endStr);
-      if (Number.isNaN(start) || Number.isNaN(end))
-        throw new Error(`Invalid port range: ${trimmed}`);
-      if (start > end) throw new Error(`Invalid port range: ${trimmed}`);
-      if (end - start + 1 > 1000) throw new Error(`Port range too large (max 1000): ${trimmed}`);
-      for (let p = start; p <= end; p++) {
-        validatePort(p);
-        ports.push(p);
-      }
-    } else {
-      const p = parseStrictInt(trimmed);
-      validatePort(p);
-      ports.push(p);
-    }
-  }
-  return ports;
+	for (const seg of segments) {
+		const trimmed = seg.trim();
+		if (trimmed.includes("-")) {
+			const dashIdx = trimmed.indexOf("-");
+			const startStr = trimmed.slice(0, dashIdx).trim();
+			const endStr = trimmed.slice(dashIdx + 1).trim();
+			const start = parseStrictInt(startStr);
+			const end = parseStrictInt(endStr);
+			if (Number.isNaN(start) || Number.isNaN(end))
+				throw new Error(`Invalid port range: ${trimmed}`);
+			if (start > end) throw new Error(`Invalid port range: ${trimmed}`);
+			if (end - start + 1 > 1000)
+				throw new Error(`Port range too large (max 1000): ${trimmed}`);
+			for (let p = start; p <= end; p++) {
+				validatePort(p);
+				ports.push(p);
+			}
+		} else {
+			const p = parseStrictInt(trimmed);
+			validatePort(p);
+			ports.push(p);
+		}
+	}
+	return ports;
 }
 
 /**
@@ -38,8 +39,8 @@ export function parsePorts(input: string): number[] {
  * @returns パースされた整数
  */
 function parseStrictInt(s: string): number {
-  if (!/^[1-9]\d*$/.test(s)) throw new Error(`Invalid port: ${s}`);
-  return parseInt(s, 10);
+	if (!/^[1-9]\d*$/.test(s)) throw new Error(`Invalid port: ${s}`);
+	return parseInt(s, 10);
 }
 
 /**
@@ -48,5 +49,5 @@ function parseStrictInt(s: string): number {
  * @throws 範囲外の場合
  */
 function validatePort(p: number): void {
-  if (p < 1 || p > 65535) throw new Error(`Port out of range (1-65535): ${p}`);
+	if (p < 1 || p > 65535) throw new Error(`Port out of range (1-65535): ${p}`);
 }
