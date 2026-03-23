@@ -46,7 +46,7 @@ export async function detect(options: DetectOptions): Promise<ProcessInfo[]> {
  * @param excludePids - 除外するPIDのSet(自プロセスと祖先)
  * @returns 検出されたプロセス一覧
  */
-function filterByPort(
+export function filterByPort(
 	processes: ProcessInfo[],
 	portMap: Map<number, number>,
 	excludePids: Set<number>,

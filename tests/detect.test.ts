@@ -2,7 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { detect } from "../src/detect.js";
+import { detect, filterByPort } from "../src/detect.js";
+import type { ProcessInfo } from "../src/types.js";
 
 describe("detect CWD-based", () => {
 	let childProc: ReturnType<typeof Bun.spawn>;
@@ -85,5 +86,69 @@ describe("detect", () => {
 	it("returns empty for unused port", async () => {
 		const result = await detect({ cwd: process.cwd(), ports: [59999] });
 		expect(Array.isArray(result)).toBe(true);
+	});
+});
+
+describe("filterByPort", () => {
+	const excludePids = new Set([1]);
+
+	it("matches processes by port", () => {
+		const processes: ProcessInfo[] = [
+			{ pid: 100, name: "node", command: "node server.js" },
+			{ pid: 200, name: "bun", command: "bun dev" },
+		];
+		const portMap = new Map<number, number>([
+			[3000, 100],
+		]);
+
+		const result = filterByPort(processes, portMap, excludePids);
+		expect(result).toEqual([
+			{ pid: 100, name: "node", command: "node server.js", port: 3000 },
+		]);
+	});
+
+	it("adds unknown processes for ports not in process list", () => {
+		const processes: ProcessInfo[] = [
+			{ pid: 100, name: "node", command: "node server.js" },
+		];
+		const portMap = new Map<number, number>([
+			[3000, 100],
+			[4000, 999],
+		]);
+
+		const result = filterByPort(processes, portMap, excludePids);
+		expect(result).toHaveLength(2);
+		expect(result[0]).toEqual({
+			pid: 100, name: "node", command: "node server.js", port: 3000,
+		});
+		expect(result[1]).toEqual({
+			pid: 999, name: "unknown", command: "", port: 4000,
+		});
+	});
+
+	it("skips excluded PIDs", () => {
+		const processes: ProcessInfo[] = [
+			{ pid: 1, name: "node", command: "node" },
+		];
+		const portMap = new Map<number, number>([[3000, 1]]);
+
+		const result = filterByPort(processes, portMap, excludePids);
+		expect(result).toEqual([]);
+	});
+
+	it("deduplicates PIDs already added from process list", () => {
+		const processes: ProcessInfo[] = [
+			{ pid: 100, name: "node", command: "node server.js" },
+		];
+		// 同じPID 100が2つのポートにいる場合
+		const portMap = new Map<number, number>([
+			[3000, 100],
+			[4000, 100],
+		]);
+
+		const result = filterByPort(processes, portMap, excludePids);
+		// processesから1回 + portMapのunknown分岐では addedPids にあるのでスキップ
+		expect(result).toHaveLength(1);
+		expect(result[0].pid).toBe(100);
 	});
 });
