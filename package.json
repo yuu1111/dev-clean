@@ -1,13 +1,15 @@
 {
 	"name": "dev-clean",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"description": "Detect and kill lingering dev server processes",
 	"type": "module",
 	"bin": {
 		"dev-clean": "dist/cli.js"
 	},
 	"files": [
-		"dist"
+		"dist",
+		"README.md",
+		"README.ja.md"
 	],
 	"scripts": {
 		"build": "bun build.ts",
