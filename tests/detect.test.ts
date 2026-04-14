@@ -97,9 +97,7 @@ describe("filterByPort", () => {
 			{ pid: 100, name: "node", command: "node server.js" },
 			{ pid: 200, name: "bun", command: "bun dev" },
 		];
-		const portMap = new Map<number, number>([
-			[3000, 100],
-		]);
+		const portMap = new Map<number, number>([[3000, 100]]);
 
 		const result = filterByPort(processes, portMap, excludePids);
 		expect(result).toEqual([
@@ -119,10 +117,16 @@ describe("filterByPort", () => {
 		const result = filterByPort(processes, portMap, excludePids);
 		expect(result).toHaveLength(2);
 		expect(result[0]).toEqual({
-			pid: 100, name: "node", command: "node server.js", port: 3000,
+			pid: 100,
+			name: "node",
+			command: "node server.js",
+			port: 3000,
 		});
 		expect(result[1]).toEqual({
-			pid: 999, name: "unknown", command: "", port: 4000,
+			pid: 999,
+			name: "unknown",
+			command: "",
+			port: 4000,
 		});
 	});
 

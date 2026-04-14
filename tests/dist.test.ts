@@ -48,10 +48,9 @@ describe("dist/cli.js (bundled)", () => {
 	});
 
 	it("--port abc --json outputs JSON error", async () => {
-		const proc = Bun.spawn(
-			["node", distCli, "--port", "abc", "--json"],
-			{ stdout: "pipe" },
-		);
+		const proc = Bun.spawn(["node", distCli, "--port", "abc", "--json"], {
+			stdout: "pipe",
+		});
 		const exitCode = await proc.exited;
 		const stdout = await new Response(proc.stdout).text();
 		expect(exitCode).toBe(1);

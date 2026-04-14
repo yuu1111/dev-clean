@@ -1,11 +1,4 @@
-import {
-	afterAll,
-	beforeAll,
-	describe,
-	expect,
-	it,
-	spyOn,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, spyOn } from "bun:test";
 import { killProcesses } from "../src/kill.js";
 
 describe("killProcesses", () => {
@@ -54,7 +47,7 @@ describe("killProcesses", () => {
 
 	it("reports Permission denied for EPERM", async () => {
 		const spy = spyOn(process, "kill");
-		spy.mockImplementation((pid: number, signal?: string | number) => {
+		spy.mockImplementation((_pid: number, signal?: string | number) => {
 			if (signal === "SIGTERM") {
 				const err = new Error("EPERM") as NodeJS.ErrnoException;
 				err.code = "EPERM";
@@ -77,7 +70,7 @@ describe("killProcesses", () => {
 
 	it("handles unknown error from process.kill", async () => {
 		const spy = spyOn(process, "kill");
-		spy.mockImplementation((pid: number, signal?: string | number) => {
+		spy.mockImplementation((_pid: number, signal?: string | number) => {
 			if (signal === "SIGTERM") {
 				const err = new Error("Unknown kill error");
 				(err as NodeJS.ErrnoException).code = "EUNKNOWN";
@@ -99,7 +92,7 @@ describe("killProcesses", () => {
 
 	it("handles non-Error throw", async () => {
 		const spy = spyOn(process, "kill");
-		spy.mockImplementation((pid: number, signal?: string | number) => {
+		spy.mockImplementation((_pid: number, signal?: string | number) => {
 			if (signal === "SIGTERM") {
 				throw "string error";
 			}
@@ -120,7 +113,7 @@ describe("killProcesses", () => {
 	it("falls back to taskkill on Windows when process survives SIGTERM", async () => {
 		let killCallCount = 0;
 		const spy = spyOn(process, "kill");
-		spy.mockImplementation((pid: number, signal?: string | number) => {
+		spy.mockImplementation((_pid: number, signal?: string | number) => {
 			killCallCount++;
 			if (signal === "SIGTERM") return true;
 			if (signal === 0) {
@@ -148,7 +141,7 @@ describe("killProcesses", () => {
 
 		let killCallCount = 0;
 		const spy = spyOn(process, "kill");
-		spy.mockImplementation((pid: number, signal?: string | number) => {
+		spy.mockImplementation((_pid: number, signal?: string | number) => {
 			killCallCount++;
 			if (signal === "SIGTERM") return true;
 			if (signal === 0) {
