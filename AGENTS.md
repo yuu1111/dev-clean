@@ -1,7 +1,6 @@
 # Project Overview
 
-dev-clean は、開発サーバーの残留プロセス(node, bun, deno, tsx, ts-node)を検出・終了するCLIツール。
-AIコーディングエージェントが `npx dev-clean` で使うことを想定。TypeScript (ESM)、本番依存ゼロ。
+dev-clean は、開発サーバーの残留プロセス(node, bun, deno, tsx, ts-node)を検出・終了するCLIツール。TypeScript (ESM)、本番依存ゼロ。
 
 # Commands
 

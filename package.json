@@ -9,7 +9,9 @@
 	"files": [
 		"dist",
 		"README.md",
-		"README.ja.md"
+		"README.ja.md",
+		"CLAUDE.md",
+		"AGENTS.md"
 	],
 	"scripts": {
 		"build": "bun build.ts",
