@@ -37,8 +37,8 @@ jobs:
       - run: bun install --frozen-lockfile --ignore-scripts
       - run: bunx biome ci .
       - run: bun run typecheck
-      - run: bun test
       - run: bun run build
+      - run: bun test
 
       - name: Verify release version
         shell: bash
