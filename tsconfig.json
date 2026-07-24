@@ -1,7 +1,6 @@
 {
-	"extends": "@yuu1111/tsconfig/base.json",
+	"extends": "@yuu1111/tsconfig/bun.json",
 	"compilerOptions": {
-		"types": ["bun-types"],
 		"outDir": "dist",
 		"rootDir": "src",
 		"sourceMap": false,
