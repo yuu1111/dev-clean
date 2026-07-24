@@ -43,3 +43,8 @@ src/
 - 外部プロセス呼び出しにはすべてタイムアウト設定あり(5-15秒)
 - パス比較はクロスプラットフォーム対応(バックスラッシュ正規化、Windows小文字化)
 - CI: GitHub Actions (ubuntu, macos, windows) で lint → typecheck → test
+
+# Release
+
+- `package.json` の version と一致する `vX.Y.Z` の GitHub Release を公開する
+- npm publish はローカルで実行せず、`.github/workflows/release.yml` の Trusted Publisher に任せる
