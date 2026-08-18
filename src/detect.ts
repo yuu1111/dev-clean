@@ -145,12 +145,17 @@ function normalizeForComparison(p: string): string {
 /**
  * @description パスが対象パス自身または配下か判定
  * @param candidate - 判定対象パス
- * @param target - 正規化済み対象パス
+ * @param target - 対象パス
  * @returns 対象パス内ならtrue
  */
-function isPathInside(candidate: string, target: string): boolean {
+export function isPathInside(candidate: string, target: string): boolean {
 	const normalized = normalizeForComparison(candidate);
-	return normalized === target || normalized.startsWith(`${target}/`);
+	const normalizedTarget = normalizeForComparison(target);
+	if (normalized === normalizedTarget) return true;
+	if (normalizedTarget === "/" || /^[a-z]:\/$/i.test(normalizedTarget)) {
+		return normalized.startsWith(normalizedTarget);
+	}
+	return normalized.startsWith(`${normalizedTarget}/`);
 }
 
 /**

@@ -25,8 +25,10 @@ export function isTargetProcess(name: string): boolean {
 export function parsePortFromAddr(addr: string): number | null {
 	const colonIdx = addr.lastIndexOf(":");
 	if (colonIdx === -1) return null;
-	const port = parseInt(addr.slice(colonIdx + 1), 10);
-	return Number.isNaN(port) ? null : port;
+	const portStr = addr.slice(colonIdx + 1);
+	if (!/^\d+$/.test(portStr)) return null;
+	const port = Number(portStr);
+	return Number.isSafeInteger(port) && port >= 1 && port <= 65535 ? port : null;
 }
 
 /**

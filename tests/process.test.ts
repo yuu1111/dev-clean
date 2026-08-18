@@ -61,5 +61,8 @@ describe("parsePortFromAddr", () => {
 		expect(parsePortFromAddr(":::8080")).toBe(8080);
 		expect(parsePortFromAddr("noport")).toBeNull();
 		expect(parsePortFromAddr("host:abc")).toBeNull();
+		expect(parsePortFromAddr("host:3000abc")).toBeNull();
+		expect(parsePortFromAddr("host:0")).toBeNull();
+		expect(parsePortFromAddr("host:65536")).toBeNull();
 	});
 });

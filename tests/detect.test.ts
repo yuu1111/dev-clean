@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { detect, filterByPort } from "../src/detect.js";
+import { detect, filterByPort, isPathInside } from "../src/detect.js";
 import type { ProcessInfo } from "../src/types.js";
 
 describe("detect CWD-based", () => {
@@ -157,5 +157,21 @@ describe("filterByPort", () => {
 		// processesから1回 + portMapのunknown分岐では addedPids にあるのでスキップ
 		expect(result).toHaveLength(1);
 		expect(result[0].pid).toBe(100);
+	});
+});
+
+describe("isPathInside", () => {
+	it("matches descendants when the target is the filesystem root", () => {
+		if (process.platform === "win32") {
+			expect(isPathInside("C:\\project", "C:\\")).toBe(true);
+			expect(isPathInside("C:\\", "C:\\")).toBe(true);
+		} else {
+			expect(isPathInside("/tmp/project", "/")).toBe(true);
+			expect(isPathInside("/", "/")).toBe(true);
+		}
+	});
+
+	it("does not treat a similarly prefixed sibling as a descendant", () => {
+		expect(isPathInside("/tmp/project-other", "/tmp/project")).toBe(false);
 	});
 });
