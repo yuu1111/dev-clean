@@ -44,7 +44,7 @@ const result = await build({
 	],
 });
 
-const code = new TextDecoder().decode(result.outputFiles[0].contents);
+const code = new TextDecoder().decode(result.outputFiles[0]!.contents);
 const [shebang, ...rest] = code.split("\n");
 const js = rest.join("\n").replace(/`([^`]*)`/g, (_, inner) => {
 	if (!inner.includes("\n")) return `\`${inner}\``;

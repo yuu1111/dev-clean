@@ -2,10 +2,10 @@
 	"extends": "@yuu1111/tsconfig/bun.json",
 	"compilerOptions": {
 		"outDir": "dist",
-		"rootDir": "src",
+		"rootDir": ".",
 		"sourceMap": false,
 		"declaration": false,
 		"declarationMap": false
 	},
-	"include": ["src"]
+	"include": ["src", "build.ts", "tests"]
 }

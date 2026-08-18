@@ -61,7 +61,7 @@ describe("killProcesses", () => {
 				{ pid: 12345, name: "node", command: "fake" },
 			]);
 			expect(result.errors.length).toBe(1);
-			expect(result.errors[0].message).toBe("Permission denied");
+			expect(result.errors[0]?.message).toBe("Permission denied");
 			expect(result.killed).toEqual([]);
 		} finally {
 			spy.mockRestore();
@@ -84,7 +84,7 @@ describe("killProcesses", () => {
 				{ pid: 12345, name: "node", command: "fake" },
 			]);
 			expect(result.errors.length).toBe(1);
-			expect(result.errors[0].message).toBe("Unknown kill error");
+			expect(result.errors[0]?.message).toBe("Unknown kill error");
 		} finally {
 			spy.mockRestore();
 		}
@@ -104,7 +104,7 @@ describe("killProcesses", () => {
 				{ pid: 12345, name: "node", command: "fake" },
 			]);
 			expect(result.errors.length).toBe(1);
-			expect(result.errors[0].message).toBe("string error");
+			expect(result.errors[0]?.message).toBe("string error");
 		} finally {
 			spy.mockRestore();
 		}
