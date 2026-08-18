@@ -23,12 +23,7 @@ describe("detect CWD-based", () => {
 	});
 
 	it("detects a child process by cwd", async () => {
-		let result: ProcessInfo[] = [];
-		for (let attempt = 0; attempt < 50; attempt++) {
-			result = await detect({ cwd: testDir, ports: [] });
-			if (result.some((proc) => proc.pid === childProc.pid)) break;
-			await Bun.sleep(100);
-		}
+		const result = await detect({ cwd: testDir, ports: [] });
 		const pids = result.map((p) => p.pid);
 		// macOS CIではlsofの権限不足でCWD検出できない場合がある
 		if (pids.length === 0 && process.platform === "darwin") {
