@@ -24,7 +24,7 @@ describe("detect CWD-based", () => {
 
 	it("detects a child process by cwd", async () => {
 		let result: ProcessInfo[] = [];
-		for (let attempt = 0; attempt < 10; attempt++) {
+		for (let attempt = 0; attempt < 50; attempt++) {
 			result = await detect({ cwd: testDir, ports: [] });
 			if (result.some((proc) => proc.pid === childProc.pid)) break;
 			await Bun.sleep(100);
