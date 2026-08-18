@@ -29,7 +29,7 @@ export async function listProcesses(): Promise<ProcessInfo[]> {
 		const match = trimmed.match(/^\s*(\d+)\s+(\S+)\s+(.*)/);
 		const [, pidStr, comm, args] = match ?? [];
 		if (!pidStr || !comm || args == null) continue;
-		const pid = parseInt(pidStr, 10);
+		const pid = Number(pidStr);
 
 		const baseName = comm.split("/").pop() ?? comm;
 		if (!isTargetProcess(baseName)) continue;
@@ -51,7 +51,7 @@ export async function listPortProcesses(
 	} catch {
 		// ssはLinux専用、macOSには存在しない
 		if (process.platform === "linux") {
-			return await listPortsSs(ports);
+			return listPortsSs(ports);
 		}
 		return new Map();
 	}
@@ -67,8 +67,8 @@ function parseLsofLine(line: string): { port: number; pid: number } | null {
 	const pidStr = parts[1];
 	const addrStr = parts[8];
 	if (!pidStr || !addrStr) return null;
-	const pid = parseInt(pidStr, 10);
-	if (Number.isNaN(pid)) return null;
+	const pid = Number(pidStr);
+	if (!Number.isInteger(pid)) return null;
 	const port = parsePortFromAddr(addrStr);
 	if (port === null) return null;
 	return { port, pid };
@@ -112,7 +112,7 @@ function parseSsLine(line: string): { port: number; pid: number } | null {
 	const pidMatch = line.match(/pid=(\d+)/);
 	const pidStr = pidMatch?.[1];
 	if (!pidStr) return null;
-	const pid = parseInt(pidStr, 10);
+	const pid = Number(pidStr);
 	return { port, pid };
 }
 
@@ -196,7 +196,7 @@ async function getProcessCwdsMacOS(
 		let currentPid: number | null = null;
 		for (const line of stdout.split("\n")) {
 			if (line.startsWith("p")) {
-				currentPid = parseInt(line.slice(1), 10);
+				currentPid = Number(line.slice(1));
 			} else if (line.startsWith("n") && currentPid !== null) {
 				result.set(currentPid, line.slice(1));
 			}
@@ -240,7 +240,7 @@ async function getAncestorsLinux(
 			const match = stat.match(/^\d+\s+\(.*?\)\s+\S+\s+(\d+)/);
 			const ppidStr = match?.[1];
 			if (!ppidStr) break;
-			const ppid = parseInt(ppidStr, 10);
+			const ppid = Number(ppidStr);
 			if (ppid <= 1) break;
 			if (ancestors.has(ppid)) break;
 			ancestors.add(ppid);
@@ -268,7 +268,7 @@ async function getAncestorsMacOS(
 		for (const line of stdout.split("\n")) {
 			const [, pidStr, ppidStr] = line.trim().match(/^(\d+)\s+(\d+)$/) ?? [];
 			if (!pidStr || !ppidStr) continue;
-			pidToParent.set(parseInt(pidStr, 10), parseInt(ppidStr, 10));
+			pidToParent.set(Number(pidStr), Number(ppidStr));
 		}
 
 		walkAncestors(pid, pidToParent, ancestors);

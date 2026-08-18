@@ -15,8 +15,6 @@ export function parsePorts(input: string): number[] {
 			const endStr = trimmed.slice(dashIdx + 1).trim();
 			const start = parseStrictInt(startStr);
 			const end = parseStrictInt(endStr);
-			if (Number.isNaN(start) || Number.isNaN(end))
-				throw new Error(`Invalid port range: ${trimmed}`);
 			if (start > end) throw new Error(`Invalid port range: ${trimmed}`);
 			if (end - start + 1 > 1000)
 				throw new Error(`Port range too large (max 1000): ${trimmed}`);
@@ -40,7 +38,7 @@ export function parsePorts(input: string): number[] {
  */
 function parseStrictInt(s: string): number {
 	if (!/^[1-9]\d*$/.test(s)) throw new Error(`Invalid port: ${s}`);
-	return parseInt(s, 10);
+	return Number(s);
 }
 
 /**

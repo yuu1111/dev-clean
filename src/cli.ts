@@ -2,30 +2,18 @@ import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
-
-declare const __VERSION__: string;
-
 import { detect } from "./detect";
 import { killProcesses } from "./kill";
 import { parsePorts } from "./parse";
 import type { CliOptions, ProcessInfo, Result } from "./types";
 
+declare const __VERSION__: string;
+
 /**
  * @description CLIエントリポイント
  */
 async function main(): Promise<void> {
-	let options: CliOptions;
-	try {
-		options = parseCliArgs();
-	} catch (err) {
-		const msg = err instanceof Error ? err.message : String(err);
-		if (process.argv.includes("--json")) {
-			write({ error: msg });
-		} else {
-			error(msg);
-		}
-		process.exit(1);
-	}
+	const options = parseCliArgs();
 
 	if (options.help) {
 		printHelp();

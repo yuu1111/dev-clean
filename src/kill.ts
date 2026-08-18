@@ -14,28 +14,47 @@ const SIGTERM_GRACE_MS = 500;
  */
 const TASKKILL_TIMEOUT_MS = 5000;
 
+interface KillOutcome {
+	pid: number;
+	error?: string;
+}
+
 /**
  * @description プロセスリストを並列停止し結果を返す
  * @param processes - 停止対象のプロセス一覧
  * @returns 停止結果(成功PID・エラー一覧)
  */
 export async function killProcesses(processes: ProcessInfo[]): Promise<Result> {
-	const killed: number[] = [];
-	const errors: Array<{ pid: number; message: string }> = [];
-
-	await Promise.allSettled(
-		processes.map(async (proc) => {
-			try {
-				await killOne(proc.pid);
-				killed.push(proc.pid);
-			} catch (err) {
-				const message = err instanceof Error ? err.message : String(err);
-				errors.push({ pid: proc.pid, message });
-			}
-		}),
+	const outcomes = await Promise.all(
+		processes.map((proc) => killProcess(proc.pid)),
 	);
 
-	return { found: processes, killed, errors };
+	return {
+		found: processes,
+		killed: outcomes
+			.filter((outcome) => outcome.error === undefined)
+			.map((outcome) => outcome.pid),
+		errors: outcomes
+			.filter(
+				(outcome): outcome is KillOutcome & { error: string } =>
+					outcome.error !== undefined,
+			)
+			.map(({ pid, error }) => ({ pid, message: error })),
+	};
+}
+
+/**
+ * @description 単一プロセスの停止結果を例外なしで返す
+ * @param pid - 停止対象のプロセスID
+ * @returns 停止結果
+ */
+async function killProcess(pid: number): Promise<KillOutcome> {
+	try {
+		await killOne(pid);
+		return { pid };
+	} catch (err) {
+		return { pid, error: err instanceof Error ? err.message : String(err) };
+	}
 }
 
 /**
@@ -55,7 +74,6 @@ async function killOne(pid: number): Promise<void> {
 	await sleep(SIGTERM_GRACE_MS);
 
 	if (!isAlive(pid)) return;
-
 	if (process.platform === "win32") {
 		try {
 			await execFileAsync("taskkill", ["/F", "/PID", String(pid)], {

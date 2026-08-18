@@ -1,30 +1,20 @@
 /**
- * @description 祖先プロセス走査の最大深度(循環防止)
+ * @description 祖先プロセス走査の最大深度
  */
 export const MAX_ANCESTOR_DEPTH = 64;
 
 /**
  * @description 検出対象のプロセス名一覧
  */
-const TARGET_NAMES = new Set([
-	"node",
-	"node.exe",
-	"bun",
-	"bun.exe",
-	"deno",
-	"deno.exe",
-	"tsx",
-	"ts-node",
-]);
+const TARGET_NAMES = new Set(["node", "bun", "deno", "tsx", "ts-node"]);
 
 /**
  * @description プロセス名がTARGET_NAMESに含まれるか判定(大文字小文字・.exe無視)
  * @param name - プロセス名
  */
 export function isTargetProcess(name: string): boolean {
-	const lower = name.toLowerCase();
-	if (TARGET_NAMES.has(lower)) return true;
-	return TARGET_NAMES.has(lower.replace(/\.exe$/, ""));
+	const normalized = name.toLowerCase().replace(/\.exe$/, "");
+	return TARGET_NAMES.has(normalized);
 }
 
 /**

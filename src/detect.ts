@@ -19,25 +19,23 @@ interface DetectOptions {
  */
 export async function detect(options: DetectOptions): Promise<ProcessInfo[]> {
 	const platform = await loadPlatform();
+	const processesPromise = platform.listProcesses();
+	const excludePidsPromise = getExcludePids(platform);
 
 	if (options.ports.length > 0) {
-		// getAncestorPids, listProcesses, listPortProcesses を全て並列実行
-		const [excludePids, processes, portMap] = await Promise.all([
-			platform.getAncestorPids(process.pid),
-			platform.listProcesses(),
+		const [processes, excludePids, portMap] = await Promise.all([
+			processesPromise,
+			excludePidsPromise,
 			platform.listPortProcesses(options.ports),
 		]);
-		excludePids.add(process.pid);
 		return filterByPort(processes, portMap, excludePids);
 	}
 
-	// getAncestorPids と listProcesses を並列実行
-	const [excludePids, processes] = await Promise.all([
-		platform.getAncestorPids(process.pid),
-		platform.listProcesses(),
+	const [processes, excludePids] = await Promise.all([
+		processesPromise,
+		excludePidsPromise,
 	]);
-	excludePids.add(process.pid);
-	return await filterByCwd(platform, processes, options.cwd, excludePids);
+	return filterByCwd(platform, processes, options.cwd, excludePids);
 }
 
 /**
@@ -52,23 +50,13 @@ export function filterByPort(
 	portMap: Map<number, number>,
 	excludePids: Set<number>,
 ): ProcessInfo[] {
-	const pidToPort = new Map<number, number>();
-	for (const [port, pid] of portMap) {
-		pidToPort.set(pid, port);
-	}
+	const pidToPort = toPidPortMap(portMap);
 
-	const results: ProcessInfo[] = [];
-
-	for (const proc of processes) {
-		if (excludePids.has(proc.pid)) continue;
-		// ポートを使っているだけの任意プロセスは停止対象にしない。
-		if (!isTargetProcess(proc.name)) continue;
+	return processes.flatMap((proc) => {
+		if (!isCandidate(proc, excludePids)) return [];
 		const port = pidToPort.get(proc.pid);
-		if (port === undefined) continue;
-		results.push({ ...proc, port });
-	}
-
-	return results;
+		return port === undefined ? [] : [{ ...proc, port }];
+	});
 }
 
 /**
@@ -85,13 +73,8 @@ async function filterByCwd(
 	cwd: string,
 	excludePids: Set<number>,
 ): Promise<ProcessInfo[]> {
-	const isWin = process.platform === "win32";
-	const normalizedCwd = normalizePath(resolve(cwd));
-	const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
-
-	const candidates = processes.filter(
-		(proc) => !excludePids.has(proc.pid) && isTargetProcess(proc.name),
-	);
+	const target = normalizeForComparison(resolve(cwd));
+	const candidates = processes.filter((proc) => isCandidate(proc, excludePids));
 
 	let cwdMap = new Map<number, string>();
 	try {
@@ -105,13 +88,39 @@ async function filterByCwd(
 
 	return candidates.filter((proc) => {
 		const procCwd = cwdMap.get(proc.pid);
-		if (!procCwd) return false;
-		const normalized = isWin
-			? normalizePath(procCwd).toLowerCase()
-			: normalizePath(procCwd);
-		// target自体に一致、またはtarget配下のサブディレクトリ
-		return normalized === target || normalized.startsWith(`${target}/`);
+		return procCwd !== undefined && isPathInside(procCwd, target);
 	});
+}
+
+/**
+ * @description 自プロセスと祖先プロセスを除外対象として取得
+ * @param platform - プラットフォームアダプタ
+ * @returns 除外するPIDのSet
+ */
+async function getExcludePids(platform: Platform): Promise<Set<number>> {
+	const excludePids = await platform.getAncestorPids(process.pid);
+	excludePids.add(process.pid);
+	return excludePids;
+}
+
+/**
+ * @description 停止対象になり得るプロセスか判定
+ * @param proc - プロセス情報
+ * @param excludePids - 除外するPID
+ * @returns 停止対象候補ならtrue
+ */
+function isCandidate(proc: ProcessInfo, excludePids: Set<number>): boolean {
+	// ポートを使っているだけの任意プロセスは停止対象にしない。
+	return !excludePids.has(proc.pid) && isTargetProcess(proc.name);
+}
+
+/**
+ * @description port→PIDマップをPID→portマップへ変換
+ * @param portMap - port→PIDのマッピング
+ * @returns PID→portのマッピング
+ */
+function toPidPortMap(portMap: Map<number, number>): Map<number, number> {
+	return new Map([...portMap].map(([port, pid]) => [pid, port]));
 }
 
 /**
@@ -121,6 +130,27 @@ async function filterByCwd(
  */
 function normalizePath(p: string): string {
 	return normalize(p).replace(/\\/g, "/");
+}
+
+/**
+ * @description パス比較用に正規化
+ * @param p - パス文字列
+ * @returns 正規化された比較用パス
+ */
+function normalizeForComparison(p: string): string {
+	const normalized = normalizePath(p);
+	return process.platform === "win32" ? normalized.toLowerCase() : normalized;
+}
+
+/**
+ * @description パスが対象パス自身または配下か判定
+ * @param candidate - 判定対象パス
+ * @param target - 正規化済み対象パス
+ * @returns 対象パス内ならtrue
+ */
+function isPathInside(candidate: string, target: string): boolean {
+	const normalized = normalizeForComparison(candidate);
+	return normalized === target || normalized.startsWith(`${target}/`);
 }
 
 /**

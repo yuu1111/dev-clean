@@ -108,8 +108,8 @@ function parseNetstatLine(line: string): { port: number; pid: number } | null {
 	const pidStr = parts[4];
 	const addrStr = parts[1];
 	if (!pidStr || !addrStr) return null;
-	const pid = parseInt(pidStr, 10);
-	if (Number.isNaN(pid)) return null;
+	const pid = Number(pidStr);
+	if (!Number.isInteger(pid)) return null;
 	const port = parsePortFromAddr(addrStr);
 	if (port === null) return null;
 	return { port, pid };
