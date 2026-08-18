@@ -105,7 +105,7 @@ describe("filterByPort", () => {
 		]);
 	});
 
-	it("adds unknown processes for ports not in process list", () => {
+	it("does not add processes missing from the target process list", () => {
 		const processes: ProcessInfo[] = [
 			{ pid: 100, name: "node", command: "node server.js" },
 		];
@@ -115,19 +115,22 @@ describe("filterByPort", () => {
 		]);
 
 		const result = filterByPort(processes, portMap, excludePids);
-		expect(result).toHaveLength(2);
+		expect(result).toHaveLength(1);
 		expect(result[0]).toEqual({
 			pid: 100,
 			name: "node",
 			command: "node server.js",
 			port: 3000,
 		});
-		expect(result[1]).toEqual({
-			pid: 999,
-			name: "unknown",
-			command: "",
-			port: 4000,
-		});
+	});
+
+	it("does not match unrelated processes listening on a port", () => {
+		const processes: ProcessInfo[] = [
+			{ pid: 100, name: "python", command: "python server.py" },
+		];
+		const portMap = new Map<number, number>([[3000, 100]]);
+
+		expect(filterByPort(processes, portMap, excludePids)).toEqual([]);
 	});
 
 	it("skips excluded PIDs", () => {

@@ -1,4 +1,5 @@
 import { normalize, resolve } from "node:path";
+import { isTargetProcess } from "./process";
 import type { Platform, ProcessInfo } from "./types";
 
 /**
@@ -57,21 +58,14 @@ export function filterByPort(
 	}
 
 	const results: ProcessInfo[] = [];
-	const addedPids = new Set<number>();
 
 	for (const proc of processes) {
 		if (excludePids.has(proc.pid)) continue;
+		// ポートを使っているだけの任意プロセスは停止対象にしない。
+		if (!isTargetProcess(proc.name)) continue;
 		const port = pidToPort.get(proc.pid);
 		if (port === undefined) continue;
 		results.push({ ...proc, port });
-		addedPids.add(proc.pid);
-	}
-
-	// ポートを使っているがTARGET_NAMESに含まれないプロセスも含める
-	for (const [port, pid] of portMap) {
-		if (excludePids.has(pid)) continue;
-		if (addedPids.has(pid)) continue;
-		results.push({ pid, name: "unknown", command: "", port });
 	}
 
 	return results;
@@ -95,7 +89,9 @@ async function filterByCwd(
 	const normalizedCwd = normalizePath(resolve(cwd));
 	const target = isWin ? normalizedCwd.toLowerCase() : normalizedCwd;
 
-	const candidates = processes.filter((proc) => !excludePids.has(proc.pid));
+	const candidates = processes.filter(
+		(proc) => !excludePids.has(proc.pid) && isTargetProcess(proc.name),
+	);
 
 	let cwdMap = new Map<number, string>();
 	try {
