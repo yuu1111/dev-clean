@@ -26,7 +26,7 @@ describe("detect CWD-based", () => {
 		const result = await detect({ cwd: testDir, ports: [] });
 		const pids = result.map((p) => p.pid);
 		// macOS CIではlsofの権限不足でCWD検出できない場合がある
-		if (pids.length === 0 && process.platform === "darwin") {
+		if (!pids.includes(childProc.pid) && process.platform === "darwin") {
 			console.warn(
 				"skipped: CWD detection unavailable on this macOS environment",
 			);
