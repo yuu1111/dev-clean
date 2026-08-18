@@ -27,9 +27,7 @@ describe("detect CWD-based", () => {
 		const pids = result.map((p) => p.pid);
 		// CI環境によってはプロセス一覧/CWD取得が権限等で利用できない
 		if (!pids.includes(childProc.pid)) {
-			console.warn(
-				"skipped: CWD detection unavailable in this environment",
-			);
+			console.warn("skipped: CWD detection unavailable in this environment");
 			return;
 		}
 		expect(pids).toContain(childProc.pid);
