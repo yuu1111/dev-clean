@@ -1,6 +1,12 @@
 {
-	"extends": ["@yuu1111/biome-config/biome"],
+	"extends": [
+		"@yuu1111/biome-config/biome"
+	],
 	"files": {
-		"includes": ["src/**", "tests/**", "*.json"]
+		"includes": [
+			"src/**",
+			"tests/**",
+			"*.json"
+		]
 	}
 }
